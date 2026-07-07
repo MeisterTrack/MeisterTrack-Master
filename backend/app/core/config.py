@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     # AI (NVIDIA NIM, OpenAI-compatible)
     nvidia_api_key: str = ""
     nvidia_api_base_url: str = "https://integrate.api.nvidia.com/v1"
-    nvidia_model_name: str = "meta/llama-3.1-70b-instruct"
+    nvidia_model_name: str = "nvidia/nvidia-nemotron-nano-9b-v2"
 
     # scoring config
     grade_deadline_underclassman: str = "12-31"  # 1, 2학년

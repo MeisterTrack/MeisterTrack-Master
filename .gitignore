@@ -9,4 +9,7 @@ dist/
 
 .DS_Store
 
+cloudflared-config.yml
+cloudflared-creds.json
+
 .claude/
