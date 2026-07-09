@@ -5,7 +5,7 @@ import { getToken } from "../lib/auth";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   if (!getToken()) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
   return <>{children}</>;
 }

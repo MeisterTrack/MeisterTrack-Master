@@ -1,6 +1,8 @@
+import { useQuery } from "@tanstack/react-query";
 import { ReactNode } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 
+import { getMe } from "../features/auth/api";
 import { getRole, logout } from "../lib/auth";
 
 const ROLE_LABEL: Record<string, string> = {
@@ -10,54 +12,81 @@ const ROLE_LABEL: Record<string, string> = {
   admin: "관리자",
 };
 
-const NAV_BY_ROLE: Record<string, { to: string; label: string }[]> = {
-  student: [
-    { to: "/dashboard/student", label: "내 대시보드" },
-    { to: "/submissions", label: "증빙 제출" },
-  ],
-  homeroom_teacher: [{ to: "/approvals", label: "승인 대기" }],
-  area_teacher: [{ to: "/approvals", label: "승인 대기" }],
-  admin: [{ to: "/dashboard/admin", label: "관리자 대시보드" }],
-};
+const STUDENT_NAV = [
+  { to: "/dashboard/student", label: "대시보드" },
+  { to: "/submissions", label: "제출하기" },
+];
+const TEACHER_NAV = [
+  { to: "/approvals", label: "승인함" },
+  { to: "/bulk-grant", label: "일괄 부여" },
+];
+const ADMIN_NAV = [
+  { to: "/dashboard/admin", label: "대시보드" },
+  { to: "/bulk-grant", label: "일괄 부여" },
+  { to: "/scoring-rules", label: "배점 규칙" },
+  { to: "/audit-log", label: "감사 로그" },
+];
+
+function navForRole(role: string | null) {
+  if (role === "student") return STUDENT_NAV;
+  if (role === "admin") return ADMIN_NAV;
+  return TEACHER_NAV;
+}
 
 export default function Layout({ children }: { children: ReactNode }) {
+  const location = useLocation();
   const navigate = useNavigate();
   const role = getRole();
-  const navLinks = role ? NAV_BY_ROLE[role] ?? [] : [];
+  const isStaff = role !== "student";
+
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe, enabled: !!role });
 
   function handleLogout() {
     logout();
-    navigate("/");
+    navigate("/login");
   }
 
+  const initials = me?.name ? me.name.slice(0, 2) : "";
+  const subLine =
+    me?.role === "student"
+      ? [me.grade ? `${me.grade}학년` : null, me.class_no ? `${me.class_no}반` : null, me.student_no]
+          .filter(Boolean)
+          .join(" · ")
+      : me?.department ?? "";
+
   return (
-    <div>
-      <header
-        style={{
-          background: "var(--color-primary)",
-          color: "white",
-          padding: "12px 24px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: 24 }}>
-          <strong>MeisterTrack</strong>
-          <nav style={{ display: "flex", gap: 16 }}>
-            {navLinks.map((link) => (
-              <Link key={link.to} to={link.to} style={{ color: "white" }}>
-                {link.label}
-              </Link>
-            ))}
-          </nav>
+    <div className="shell">
+      <aside className="sidebar">
+        <Link to="/" className="side-brand">
+          <span className="side-dot" />
+          MeisterTrack
+        </Link>
+        {role && <span className={`role-badge ${isStaff ? "staff" : ""}`}>{ROLE_LABEL[role] ?? role}</span>}
+
+        <nav>
+          {navForRole(role).map((item) => (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={`side-link ${location.pathname === item.to ? "active" : ""}`}
+            >
+              {item.label}
+            </Link>
+          ))}
+        </nav>
+
+        <div className="side-profile">
+          <div className="side-avatar">{initials}</div>
+          <div>
+            <b>{me?.name ?? ""}</b>
+            <span>{subLine}</span>
+          </div>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          {role && <span>{ROLE_LABEL[role] ?? role}</span>}
-          <button onClick={handleLogout}>로그아웃</button>
-        </div>
-      </header>
-      <main style={{ padding: 24 }}>{children}</main>
+        <button className="side-logout" onClick={handleLogout}>
+          로그아웃
+        </button>
+      </aside>
+      <main className="main">{children}</main>
     </div>
   );
 }

@@ -28,3 +28,12 @@ class Grade(str, enum.Enum):
     S = "S"
     A = "A"
     B = "B"
+
+
+DOMAIN_LABEL: dict[Domain, str] = {
+    Domain.BASIC_JOB_COMPETENCY: "직업기초능력",
+    Domain.TECHNICAL_COMPETENCY: "전문기술역량",
+    Domain.CHARACTER_WORK_ETHIC: "인성/직업의식",
+    Domain.HUMANITIES_LITERACY: "인문학적 소양",
+    Domain.FOREIGN_LANGUAGE: "외국어 능력",
+}

@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, String, Text, func
+from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, Text, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.common.enums import ApprovalStatus, Domain
@@ -17,6 +17,7 @@ class Submission(Base):
     file_path: Mapped[str | None] = mapped_column(String(500), nullable=True)
     self_reported_text: Mapped[str | None] = mapped_column(Text, nullable=True)  # 봉사시간/대회 입상 내역 등 자기입력
     status: Mapped[ApprovalStatus] = mapped_column(Enum(ApprovalStatus), default=ApprovalStatus.PENDING)
+    awarded_score: Mapped[float | None] = mapped_column(Numeric(6, 2), nullable=True)  # 승인 시 확정 배점
     reject_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime, server_default=func.now(), onupdate=func.now())

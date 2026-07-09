@@ -8,7 +8,7 @@ from app.common.enums import Role
 from app.core.security import decode_access_token
 from app.db.session import SessionLocal
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/google/mock-login")
 
 
 def get_db() -> Generator[Session, None, None]:
@@ -36,3 +36,12 @@ def require_role(*allowed_roles: Role):
         return claims
 
     return _checker
+
+
+def get_current_user(db: Session = Depends(get_db), claims: dict = Depends(get_current_user_claims)):
+    from app.features.auth.models import User
+
+    user = db.get(User, int(claims["sub"]))
+    if user is None:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="사용자를 찾을 수 없습니다.")
+    return user

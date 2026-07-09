@@ -1,11 +1,63 @@
+@font-face {
+  font-family: "GmarketSans";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansMedium.woff") format("woff");
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: "GmarketSans";
+  src: url("https://cdn.jsdelivr.net/gh/projectnoonnu/noonfonts_2001@1.1/GmarketSansBold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
 :root {
+  /* 브랜드 컬러 (학교 로고 BMO 팔레트) — 추가/변경 금지, 이 안에서만 사용 */
   --color-primary: #1e3359;
   --color-primary-hover: #16263f;
   --color-accent: #3171c8;
+  --color-accent-bg: #eaf1fb;
   --color-success: #54b8b5;
+  --color-success-bg: #54b8b526;
   --color-warning: #f3b057;
+  --color-warning-bg: #f3b05726;
   --color-danger: #e74847;
+  --color-danger-bg: #e7484726;
   --color-bg-tint: #abc3ea26;
   --color-text: #1a1a1a;
   --color-text-muted: #666666;
+
+  /* 중립 그레이 스케일 (브랜드 팔레트 제약 대상 아님 — UI 뼈대용) */
+  --color-ink: #0e1420;
+  --color-gray-900: #1b2333;
+  --color-gray-600: #5b6472;
+  --color-gray-400: #9aa3b2;
+  --color-gray-200: #e2e5ea;
+  --color-gray-100: #eef0f3;
+  --color-gray-50: #f7f8fa;
+  --color-white: #ffffff;
+
+  /* 타이포그래피 */
+  --font-body: "GmarketSans", -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-body);
+  font-weight: 500;
+  color: var(--color-text);
+  background: var(--color-gray-50);
+}
+
+.mono {
+  font-family: var(--font-mono);
 }

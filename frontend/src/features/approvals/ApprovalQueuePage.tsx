@@ -1,98 +1,220 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 import Layout from "../../components/Layout";
-import { DOMAIN_LABEL } from "../../lib/domains";
 import { getAiReviewResult } from "../ai_review/api";
-import { Submission } from "../submissions/api";
-import { decideSubmission, getPendingQueue } from "./api";
+import { decideOnboardingRequest, listOnboardingRequests } from "../auth/api";
+import { getRole } from "../../lib/auth";
+import { DOMAIN_LABEL } from "../../lib/domains";
+import { decideSubmission, getPendingQueue, QueueItem } from "./api";
 
-function QueueRow({ submission }: { submission: Submission }) {
+export default function ApprovalQueuePage() {
   const queryClient = useQueryClient();
+  const role = getRole();
+  const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
+  const [awardedScore, setAwardedScore] = useState<string>("");
+
+  const { data: queue = [] } = useQuery({ queryKey: ["approval-queue"], queryFn: getPendingQueue });
+  const selected = queue.find((item) => item.id === selectedId) ?? queue[0] ?? null;
+
+  useEffect(() => {
+    setAwardedScore(selected ? String(selected.max_score) : "");
+  }, [selected?.id]);
 
   const { data: aiResult } = useQuery({
-    queryKey: ["ai-review", submission.id],
-    queryFn: () => getAiReviewResult(submission.id),
+    queryKey: ["ai-review", selected?.id],
+    queryFn: () => getAiReviewResult(selected!.id),
+    enabled: !!selected,
+  });
+
+  const { data: onboardingRequests = [] } = useQuery({
+    queryKey: ["onboarding-requests"],
+    queryFn: listOnboardingRequests,
+    enabled: role === "homeroom_teacher",
+  });
+
+  const onboardingDecisionMutation = useMutation({
+    mutationFn: ({ userId, approve }: { userId: number; approve: boolean }) => decideOnboardingRequest(userId, approve),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["onboarding-requests"] }),
   });
 
   const decisionMutation = useMutation({
-    mutationFn: (params: { approve: boolean; reason?: string }) =>
-      decideSubmission(submission.id, params.approve, params.reason),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["approval-queue"] }),
+    mutationFn: (params: { approve: boolean; reason?: string; score?: number }) =>
+      decideSubmission(selected!.id, params.approve, { rejectReason: params.reason, awardedScore: params.score }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["approval-queue"] });
+      setSelectedId(null);
+      setShowReject(false);
+      setRejectReason("");
+      setAwardedScore("");
+    },
   });
 
-  return (
-    <tr>
-      <td style={cellStyle}>{DOMAIN_LABEL[submission.domain]}</td>
-      <td style={cellStyle}>{submission.self_reported_text ?? (submission.file_path ? "파일 첨부" : "-")}</td>
-      <td style={cellStyle}>
-        {aiResult ? (
-          <span>
-            추천 항목 #{aiResult.suggested_criterion_id ?? "-"} (신뢰도 {(aiResult.confidence * 100).toFixed(0)}%)
-            {aiResult.flag && <span style={{ color: "var(--color-danger)" }}> · {aiResult.flag}</span>}
-          </span>
-        ) : (
-          <span style={{ color: "var(--color-text-muted)" }}>분석 대기중</span>
-        )}
-      </td>
-      <td style={cellStyle}>
-        <button onClick={() => decisionMutation.mutate({ approve: true })}>승인</button>
-        <button onClick={() => setShowReject((v) => !v)} style={{ marginLeft: 8 }}>
-          반려
-        </button>
-        {showReject && (
-          <div style={{ marginTop: 8 }}>
-            <input
-              placeholder="반려 사유"
-              value={rejectReason}
-              onChange={(e) => setRejectReason(e.target.value)}
-            />
-            <button
-              onClick={() => decisionMutation.mutate({ approve: false, reason: rejectReason })}
-              style={{ marginLeft: 8, background: "var(--color-danger)", color: "white" }}
-            >
-              반려 확정
-            </button>
-          </div>
-        )}
-      </td>
-    </tr>
-  );
-}
-
-export default function ApprovalQueuePage() {
-  const { data: queue = [] } = useQuery({
-    queryKey: ["approval-queue"],
-    queryFn: getPendingQueue,
-  });
+  function selectItem(item: QueueItem) {
+    setSelectedId(item.id);
+    setShowReject(false);
+    setRejectReason("");
+  }
 
   return (
     <Layout>
-      <h1>승인 대기 목록</h1>
-      <table style={{ borderCollapse: "collapse", width: "100%" }}>
-        <thead>
-          <tr>
-            <th style={cellStyle}>영역</th>
-            <th style={cellStyle}>내용</th>
-            <th style={cellStyle}>AI 추천</th>
-            <th style={cellStyle}>처리</th>
-          </tr>
-        </thead>
-        <tbody>
-          {queue.map((s) => (
-            <QueueRow key={s.id} submission={s} />
+      {role === "homeroom_teacher" && onboardingRequests.length > 0 && (
+        <div className="card table-card" style={{ marginBottom: 20 }}>
+          <div className="table-toolbar">
+            <h3>가입 승인 대기 (학생)</h3>
+          </div>
+          {onboardingRequests.map((req) => (
+            <div className="h-row" key={req.id}>
+              <div>
+                <div className="h-name">{req.name}</div>
+                <div className="h-sub">{req.email}</div>
+              </div>
+              <div style={{ display: "flex", gap: 8 }}>
+                <button className="tbtn" onClick={() => onboardingDecisionMutation.mutate({ userId: req.id, approve: false })}>
+                  반려
+                </button>
+                <button
+                  className="tbtn solid"
+                  onClick={() => onboardingDecisionMutation.mutate({ userId: req.id, approve: true })}
+                >
+                  승인
+                </button>
+              </div>
+            </div>
           ))}
-        </tbody>
-      </table>
-      {queue.length === 0 && <p>대기 중인 항목이 없습니다.</p>}
+        </div>
+      )}
+
+      <div className="approvals-main card" style={{ minHeight: 500 }}>
+        <div className="queue-col">
+          <div className="queue-head">
+            <h1>승인 대기</h1>
+            <div className="sub">{queue.length}건 대기중</div>
+          </div>
+          {queue.map((item) => (
+            <div
+              key={item.id}
+              className={`q-item ${selected?.id === item.id ? "selected" : ""}`}
+              onClick={() => selectItem(item)}
+            >
+              <div className="q-top">
+                <span className="q-name">{item.student_name}</span>
+                <span className="q-time">{new Date(item.created_at).toLocaleDateString()}</span>
+              </div>
+              <div className="q-meta">
+                {item.criterion_name} · {DOMAIN_LABEL[item.domain]}
+              </div>
+            </div>
+          ))}
+          {queue.length === 0 && (
+            <div style={{ padding: 22, fontSize: 13, color: "var(--color-gray-400)" }}>대기 중인 항목이 없습니다.</div>
+          )}
+        </div>
+
+        {selected && (
+          <div className="detail">
+            <div className="d-head">
+              <div>
+                <h2>
+                  {selected.student_name} · {selected.criterion_name}
+                </h2>
+                <div className="sub">
+                  {DOMAIN_LABEL[selected.domain]} · {new Date(selected.created_at).toLocaleString()} 제출 · #SUB-
+                  {selected.id}
+                </div>
+              </div>
+            </div>
+
+            {selected.self_reported_text && (
+              <div className="card" style={{ padding: "16px 20px", marginBottom: 20, fontSize: 13, lineHeight: 1.6 }}>
+                {selected.self_reported_text}
+              </div>
+            )}
+            {selected.file_path && (
+              <div
+                className="card"
+                style={{
+                  height: 160,
+                  marginBottom: 20,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  color: "var(--color-gray-400)",
+                  fontSize: 12.5,
+                }}
+              >
+                증빙 파일 첨부됨 ({selected.file_path.split("/").pop()})
+              </div>
+            )}
+
+            <div className="card ai-panel">
+              <h4>AI 1차 검증 결과</h4>
+              {aiResult ? (
+                <>
+                  <div className="ai-row">
+                    <span className="lbl">매칭 신뢰도</span>
+                    <span className="v mono">{(aiResult.confidence * 100).toFixed(0)}%</span>
+                  </div>
+                  <div className="ai-row">
+                    <span className="lbl">추천 항목 ID</span>
+                    <span className="v">{aiResult.suggested_criterion_id ?? "-"}</span>
+                  </div>
+                  {aiResult.flag && (
+                    <div className="ai-row">
+                      <span className="lbl">플래그</span>
+                      <span className="v" style={{ color: "var(--color-danger)" }}>
+                        {aiResult.flag}
+                      </span>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div style={{ fontSize: 12.5, color: "var(--color-gray-400)" }}>AI 분석 대기중</div>
+              )}
+            </div>
+
+            <div className="card score-editor">
+              <label>확정 배점</label>
+              <input type="number" value={awardedScore} onChange={(e) => setAwardedScore(e.target.value)} />
+              <span className="of">/ {selected.max_score}점 만점</span>
+            </div>
+
+            {showReject && (
+              <div className="field" style={{ marginBottom: 12 }}>
+                <input
+                  placeholder="반려 사유를 입력하세요"
+                  value={rejectReason}
+                  onChange={(e) => setRejectReason(e.target.value)}
+                />
+              </div>
+            )}
+
+            <div className="action-row">
+              {!showReject ? (
+                <button className="btn reject" onClick={() => setShowReject(true)}>
+                  반려하기
+                </button>
+              ) : (
+                <button
+                  className="btn reject"
+                  onClick={() => decisionMutation.mutate({ approve: false, reason: rejectReason })}
+                  disabled={!rejectReason}
+                >
+                  반려 확정
+                </button>
+              )}
+              <button
+                className="btn approve"
+                onClick={() => decisionMutation.mutate({ approve: true, score: Number(awardedScore) })}
+              >
+                {awardedScore}점으로 승인
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
     </Layout>
   );
 }
-
-const cellStyle = {
-  border: "1px solid #ddd",
-  padding: 8,
-  textAlign: "left" as const,
-};

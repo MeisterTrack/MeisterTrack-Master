@@ -15,6 +15,7 @@ class ScoringCriterion(Base):
     name: Mapped[str] = mapped_column(String(200))  # 예: "정보처리산업기사"
     max_score: Mapped[float] = mapped_column(Numeric(6, 2))
     applicable_grade: Mapped[int | None] = mapped_column(nullable=True)  # 학년 제한 없으면 NULL
+    owner_department: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 입력 담당 (F-8)
 
 
 class GradeThreshold(Base):

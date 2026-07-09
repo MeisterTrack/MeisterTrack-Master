@@ -18,6 +18,7 @@ class SubmissionResponse(BaseModel):
     file_path: str | None
     self_reported_text: str | None
     status: ApprovalStatus
+    awarded_score: float | None
     reject_reason: str | None
     created_at: datetime
 

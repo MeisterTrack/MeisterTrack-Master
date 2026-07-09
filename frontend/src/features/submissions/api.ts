@@ -7,6 +7,7 @@ export interface Submission {
   file_path: string | null;
   self_reported_text: string | null;
   status: "pending" | "approved" | "rejected";
+  awarded_score: number | null;
   reject_reason: string | null;
   created_at: string;
 }

@@ -8,15 +8,23 @@ export const DOMAIN_LABEL: Record<string, string> = {
 
 export const DOMAINS = Object.keys(DOMAIN_LABEL);
 
+export const TEACHER_DEPARTMENTS = ["담임교사", "산학협력부", "전문교육부", "체육교사", "영어교과", "국어교과"];
+
 export const GRADE_COLOR: Record<string, string> = {
   S: "var(--color-success)",
   A: "var(--color-success)",
   B: "var(--color-warning)",
 };
 
+export const GRADE_BG_COLOR: Record<string, string> = {
+  S: "var(--color-success-bg)",
+  A: "var(--color-success-bg)",
+  B: "var(--color-warning-bg)",
+};
+
 export const STATUS_LABEL: Record<string, string> = {
   pending: "승인 대기",
-  approved: "승인",
+  approved: "승인완료",
   rejected: "반려",
 };
 
@@ -24,4 +32,10 @@ export const STATUS_COLOR: Record<string, string> = {
   pending: "var(--color-warning)",
   approved: "var(--color-success)",
   rejected: "var(--color-danger)",
+};
+
+export const STATUS_BG_COLOR: Record<string, string> = {
+  pending: "var(--color-warning-bg)",
+  approved: "var(--color-success-bg)",
+  rejected: "var(--color-danger-bg)",
 };

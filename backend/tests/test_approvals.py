@@ -11,7 +11,8 @@ from app.features.submissions.models import Submission
 
 
 def _make_user(db, role, **kwargs):
-    user = User(login_id=f"user-{role.value}-{kwargs.get('grade')}-{kwargs.get('class_no')}", hashed_password="x", name="테스트", role=role, **kwargs)
+    email = f"user-{role.value}-{kwargs.get('grade')}-{kwargs.get('class_no')}@bssm.hs.kr"
+    user = User(email=email, name="테스트", role=role, approval_status=ApprovalStatus.APPROVED, **kwargs)
     db.add(user)
     db.commit()
     db.refresh(user)

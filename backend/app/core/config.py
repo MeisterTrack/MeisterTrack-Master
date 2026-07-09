@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     jwt_access_token_expire_minutes: int = 60 * 12
+    allowed_email_domain: str = "bssm.hs.kr"
+    google_oauth_mock: bool = True  # 실제 Google OAuth 클라이언트 발급 전까지 mock 로그인 사용
+    google_client_id: str = ""
+    google_client_secret: str = ""
 
     # AI (NVIDIA NIM, OpenAI-compatible)
     nvidia_api_key: str = ""
