@@ -6,14 +6,28 @@ from app.common.enums import ApprovalStatus, Role
 
 
 class GoogleMockLoginRequest(BaseModel):
-    """실제 Google OAuth 클라이언트 발급 전까지 사용하는 mock 로그인 입력.
+    """Client ID 발급 전까지만 쓰는 mock 로그인 입력.
 
-    실제 연동 시에는 프론트가 OAuth code를 보내고, 이 자리에서 Google 토큰 교환 후
-    검증된 email/name을 받아오는 것으로 교체한다 (도메인 검증 로직은 그대로 재사용).
+    이메일만으로 아무 계정에나 로그인되므로 접근 코드(secret)가 mock_login_secret과 일치해야 하며,
+    settings.google_oauth_mock이 False거나 mock_login_secret이 비어있으면 완전히 차단된다.
     """
 
     email: str
     name: str
+    secret: str
+
+
+class GoogleCallbackRequest(BaseModel):
+    """Google Identity Services "Sign in with Google" 콜백에서 받은 ID 토큰(JWT)."""
+
+    id_token: str
+
+
+class AuthConfigResponse(BaseModel):
+    """프론트가 실제 Google 버튼을 그릴지 mock 폼을 보여줄지 판단하는 데 쓰는 공개 설정."""
+
+    google_client_id: str
+    mock_enabled: bool
 
 
 class LoginResult(BaseModel):

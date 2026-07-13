@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     google_oauth_mock: bool = True  # 실제 Google OAuth 클라이언트 발급 전까지 mock 로그인 사용
     google_client_id: str = ""
     google_client_secret: str = ""
+    # mock 로그인은 이메일만으로 아무 계정에나 로그인되므로, 이 값이 비어있으면 mock 로그인 자체를 차단한다(fail-closed).
+    # 설정 시에는 이 코드를 아는 사람만 mock 로그인을 쓸 수 있다.
+    mock_login_secret: str = ""
 
     # AI (NVIDIA NIM, OpenAI-compatible)
     nvidia_api_key: str = ""

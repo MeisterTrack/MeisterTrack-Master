@@ -1,34 +1,82 @@
-import { FormEvent, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { getRole, homeRouteForRole, setToken } from "../../lib/auth";
-import { mockGoogleLogin } from "./api";
+import { getAuthConfig, googleCallbackLogin, mockGoogleLogin } from "./api";
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: { client_id: string; callback: (response: { credential: string }) => void }) => void;
+          renderButton: (parent: HTMLElement, options: Record<string, unknown>) => void;
+        };
+      };
+    };
+  }
+}
 
 export default function LoginPage() {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
+  const [secret, setSecret] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pendingMessage, setPendingMessage] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
 
-  async function handleSubmit(event: FormEvent) {
+  const { data: config } = useQuery({ queryKey: ["auth-config"], queryFn: getAuthConfig });
+  const useRealGoogleLogin = !!config?.google_client_id;
+
+  function handleLoginResult(result: { status: string; access_token: string | null; email: string; name: string }) {
+    if (result.status === "ok" && result.access_token) {
+      setToken(result.access_token);
+      navigate(homeRouteForRole(getRole()));
+    } else if (result.status === "needs_onboarding") {
+      navigate("/onboarding", { state: { email: result.email, name: result.name } });
+    } else {
+      setPendingMessage("가입 요청이 아직 승인 대기 중입니다. 담임교사 또는 관리자 승인 후 이용할 수 있어요.");
+    }
+  }
+
+  useEffect(() => {
+    if (!useRealGoogleLogin || !config || !window.google || !googleButtonRef.current) return;
+
+    window.google.accounts.id.initialize({
+      client_id: config.google_client_id,
+      callback: async (response) => {
+        setError(null);
+        setPendingMessage(null);
+        try {
+          const result = await googleCallbackLogin(response.credential);
+          handleLoginResult(result);
+        } catch {
+          setError("로그인에 실패했습니다. 학교 계정(@bssm.hs.kr)인지 확인해주세요.");
+        }
+      },
+    });
+    window.google.accounts.id.renderButton(googleButtonRef.current, {
+      theme: "outline",
+      size: "large",
+      width: 320,
+      text: "signin_with",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [useRealGoogleLogin, config]);
+
+  async function handleMockSubmit(event: FormEvent) {
     event.preventDefault();
     setError(null);
     setPendingMessage(null);
     setSubmitting(true);
     try {
-      const result = await mockGoogleLogin(email, name);
-      if (result.status === "ok" && result.access_token) {
-        setToken(result.access_token);
-        navigate(homeRouteForRole(getRole()));
-      } else if (result.status === "needs_onboarding") {
-        navigate("/onboarding", { state: { email: result.email, name: result.name } });
-      } else {
-        setPendingMessage("가입 요청이 아직 승인 대기 중입니다. 담임교사 또는 관리자 승인 후 이용할 수 있어요.");
-      }
+      const result = await mockGoogleLogin(email, name, secret);
+      handleLoginResult(result);
     } catch {
-      setError("로그인에 실패했습니다. 학교 계정(@bssm.hs.kr)인지 확인해주세요.");
+      setError("로그인에 실패했습니다. 학교 계정(@bssm.hs.kr)이고 접근 코드가 맞는지 확인해주세요.");
     } finally {
       setSubmitting(false);
     }
@@ -110,25 +158,42 @@ export default function LoginPage() {
             별도의 회원가입 절차는 없습니다.
           </div>
 
-          <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10, textAlign: "left" }}>
-            <div className="field">
-              <label>학교 이메일</label>
-              <input
-                type="email"
-                placeholder="student@bssm.hs.kr"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-            <div className="field">
-              <label>이름</label>
-              <input type="text" placeholder="홍길동" value={name} onChange={(e) => setName(e.target.value)} required />
-            </div>
-            <button type="submit" className="btn-primary" disabled={submitting} style={{ width: "100%" }}>
-              {submitting ? "로그인 중..." : "학교 Google 계정으로 로그인"}
-            </button>
-          </form>
+          {useRealGoogleLogin ? (
+            <div style={{ display: "flex", justifyContent: "center" }} ref={googleButtonRef} />
+          ) : (
+            <form onSubmit={handleMockSubmit} style={{ display: "flex", flexDirection: "column", gap: 10, textAlign: "left" }}>
+              <div className="field">
+                <label>학교 이메일</label>
+                <input
+                  type="email"
+                  placeholder="student@bssm.hs.kr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
+              </div>
+              <div className="field">
+                <label>이름</label>
+                <input type="text" placeholder="홍길동" value={name} onChange={(e) => setName(e.target.value)} required />
+              </div>
+              <div className="field">
+                <label>접근 코드</label>
+                <input
+                  type="password"
+                  placeholder="팀 내부 공유 코드"
+                  value={secret}
+                  onChange={(e) => setSecret(e.target.value)}
+                  required
+                />
+              </div>
+              <button type="submit" className="btn-primary" disabled={submitting} style={{ width: "100%" }}>
+                {submitting ? "로그인 중..." : "학교 Google 계정으로 로그인"}
+              </button>
+              <div style={{ fontSize: 10.5, color: "var(--color-gray-400)", textAlign: "center" }}>
+                (Google OAuth 미연동 — 개발용 임시 로그인)
+              </div>
+            </form>
+          )}
 
           {error && <p style={{ color: "var(--color-danger)", fontSize: 12.5, marginTop: 12 }}>{error}</p>}
           {pendingMessage && <p style={{ color: "var(--color-warning)", fontSize: 12.5, marginTop: 12 }}>{pendingMessage}</p>}

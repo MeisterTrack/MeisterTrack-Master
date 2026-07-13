@@ -8,8 +8,23 @@ export interface LoginResult {
   name: string;
 }
 
-export async function mockGoogleLogin(email: string, name: string): Promise<LoginResult> {
-  const { data } = await apiClient.post("/auth/google/mock-login", { email, name });
+export async function mockGoogleLogin(email: string, name: string, secret: string): Promise<LoginResult> {
+  const { data } = await apiClient.post("/auth/google/mock-login", { email, name, secret });
+  return data;
+}
+
+export interface AuthConfig {
+  google_client_id: string;
+  mock_enabled: boolean;
+}
+
+export async function getAuthConfig(): Promise<AuthConfig> {
+  const { data } = await apiClient.get("/auth/config");
+  return data;
+}
+
+export async function googleCallbackLogin(idToken: string): Promise<LoginResult> {
+  const { data } = await apiClient.post("/auth/google/callback", { id_token: idToken });
   return data;
 }
 

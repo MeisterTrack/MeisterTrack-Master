@@ -1,12 +1,18 @@
+import secrets
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.common.enums import ApprovalStatus, Role
+from app.common.enums import Role
+from app.common.exceptions import PermissionDeniedError
+from app.core.config import get_settings
 from app.core.deps import get_current_user, get_db, require_role
 from app.features.auth import service
 from app.features.auth.models import User
 from app.features.auth.schemas import (
+    AuthConfigResponse,
     CurrentUser,
+    GoogleCallbackRequest,
     GoogleMockLoginRequest,
     HomeroomAssignmentUpdate,
     LoginResult,
@@ -19,33 +25,36 @@ from app.features.auth.schemas import (
 router = APIRouter()
 
 
+@router.get("/config", response_model=AuthConfigResponse)
+def get_auth_config() -> AuthConfigResponse:
+    """프론트가 실제 Google 버튼을 그릴지 mock 폼을 보여줄지 판단하는 공개 설정."""
+    settings = get_settings()
+    return AuthConfigResponse(google_client_id=settings.google_client_id, mock_enabled=settings.google_oauth_mock)
+
+
 @router.post("/google/mock-login", response_model=LoginResult)
 def google_mock_login(payload: GoogleMockLoginRequest, db: Session = Depends(get_db)) -> LoginResult:
-    """실제 Google OAuth 클라이언트 발급 전까지 쓰는 mock 로그인.
+    """Client ID 발급 전까지만 쓰는 mock 로그인.
 
-    프론트는 이 응답의 status를 보고 분기한다:
-    - needs_onboarding: 처음 로그인 -> 온보딩 화면으로
-    - pending: 온보딩은 했지만 담임/관리자 승인 대기중
-    - ok: 정상 로그인, access_token 발급됨
+    이메일만으로 아무 계정에나 로그인되므로 mock_login_secret이 설정돼 있고 일치할 때만 허용한다
+    (fail-closed: 코드가 설정 안 돼 있으면 무조건 차단).
     """
-    user = service.find_user_by_email(db, payload.email)
-    # 기존 관리자 계정은 학교 도메인 제한 예외 (별도 프로비저닝, 학교 Workspace 계정 아닐 수 있음)
-    if user is None or user.role != Role.ADMIN:
-        service.assert_allowed_domain(payload.email)
+    settings = get_settings()
+    if not settings.google_oauth_mock:
+        raise PermissionDeniedError("mock 로그인은 비활성화되어 있습니다. 실제 Google 로그인을 이용해주세요.")
+    if not settings.mock_login_secret or not secrets.compare_digest(payload.secret, settings.mock_login_secret):
+        raise PermissionDeniedError("접근 코드가 올바르지 않습니다.")
 
-    if user is None:
-        return LoginResult(status="needs_onboarding", email=payload.email, name=payload.name)
-    if user.approval_status == ApprovalStatus.PENDING:
-        return LoginResult(status="pending", email=user.email, name=user.name)
-    if user.approval_status == ApprovalStatus.REJECTED:
-        return LoginResult(status="pending", email=user.email, name=user.name)
+    service.check_login_domain(db, payload.email)
+    return service.resolve_login(db, payload.email, payload.name)
 
-    return LoginResult(
-        status="ok",
-        access_token=service.issue_token_for(user),
-        email=user.email,
-        name=user.name,
-    )
+
+@router.post("/google/callback", response_model=LoginResult)
+def google_callback(payload: GoogleCallbackRequest, db: Session = Depends(get_db)) -> LoginResult:
+    """Google Identity Services "Sign in with Google" 콜백 — ID 토큰을 서버에서 검증한다."""
+    email, name = service.verify_google_id_token(payload.id_token)
+    service.check_login_domain(db, email)
+    return service.resolve_login(db, email, name)
 
 
 @router.post("/onboarding", response_model=OnboardingResponse)
