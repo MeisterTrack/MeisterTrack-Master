@@ -972,13 +972,234 @@ table.data-table tbody tr:last-child td {
   font-weight: 700;
 }
 
+/* ===== 랜딩 · Problem → Solution 스플릿 ===== */
+.landing-split {
+  max-width: 1000px;
+  margin: 120px auto 0;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 64px;
+  align-items: center;
+}
+.landing-split-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--color-accent);
+  margin-bottom: 10px;
+}
+.landing-split h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.35;
+  margin: 0 0 14px;
+  color: var(--color-ink);
+}
+.landing-split p {
+  font-size: 14.5px;
+  color: var(--color-gray-600);
+  line-height: 1.75;
+  margin: 0 0 24px;
+}
+.landing-check-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.landing-check-list .item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13.5px;
+  color: var(--color-ink);
+}
+.landing-check-list .ck {
+  width: 18px;
+  height: 18px;
+  border-radius: 6px;
+  background: var(--color-success-bg);
+  color: var(--color-success);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+}
+.landing-light-shot {
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 14px;
+  padding: 18px;
+}
+.landing-ls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #fff;
+  border: 1px solid var(--color-gray-200);
+  border-radius: 10px;
+  padding: 12px 14px;
+  margin-bottom: 8px;
+}
+.landing-ls-row:last-child {
+  margin-bottom: 0;
+}
+.landing-ls-name {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--color-ink);
+}
+.landing-ls-sub {
+  font-size: 10.5px;
+  color: var(--color-gray-400);
+  margin-top: 2px;
+}
+
+/* ===== 랜딩 · 작동 방식 (스텝) ===== */
+.landing-steps-wrap {
+  max-width: 1000px;
+  margin: 120px auto 0;
+  padding: 0 32px;
+}
+.landing-section-head {
+  text-align: center;
+  margin-bottom: 44px;
+}
+.landing-section-head h2 {
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0;
+  color: var(--color-ink);
+}
+.landing-steps {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+}
+.landing-step {
+  position: relative;
+  padding: 24px 20px;
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 14px;
+}
+.landing-step .n {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  background: var(--color-ink);
+  color: #fff;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 16px;
+}
+.landing-step h4 {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0 0 6px;
+  color: var(--color-ink);
+}
+.landing-step p {
+  font-size: 12px;
+  color: var(--color-gray-600);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* ===== 랜딩 · 역할별 가치 ===== */
+.landing-roles {
+  max-width: 1000px;
+  margin: 120px auto 0;
+  padding: 0 32px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 20px;
+}
+.landing-role-card {
+  padding: 28px 24px;
+  border-radius: 16px;
+  border: 1px solid var(--color-gray-200);
+}
+.landing-role-card .role-tag {
+  display: inline-block;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 4px 11px;
+  border-radius: 999px;
+  margin-bottom: 16px;
+}
+.landing-role-card.student .role-tag {
+  color: var(--color-accent);
+  background: var(--color-accent-bg);
+}
+.landing-role-card.teacher .role-tag {
+  color: var(--color-success);
+  background: var(--color-success-bg);
+}
+.landing-role-card.admin .role-tag {
+  color: #fff;
+  background: var(--color-ink);
+}
+.landing-role-card h4 {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0 0 12px;
+  color: var(--color-ink);
+}
+.landing-role-card ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+.landing-role-card li {
+  font-size: 12.5px;
+  color: var(--color-gray-600);
+  line-height: 1.6;
+  padding-left: 14px;
+  position: relative;
+}
+.landing-role-card li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 7px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--color-gray-400);
+}
+
+/* ===== 랜딩 · 기능 벤토 그리드 ===== */
 .landing-features {
   max-width: 1000px;
-  margin: 88px auto 0;
+  margin: 120px auto 0;
   padding: 0 32px;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 28px;
+  grid-auto-rows: 168px;
+  gap: 16px;
+}
+.landing-features > div {
+  padding: 22px;
+  background: var(--color-gray-50);
+  border: 1px solid var(--color-gray-200);
+  border-radius: 14px;
+  display: flex;
+  flex-direction: column;
+}
+.landing-features > div.big {
+  grid-column: span 2;
+  grid-row: span 2;
 }
 .landing-feature-icon {
   width: 36px;
@@ -995,6 +1216,7 @@ table.data-table tbody tr:last-child td {
   font-size: 14.5px;
   font-weight: 700;
   margin: 0 0 6px;
+  color: var(--color-ink);
 }
 .landing-features p {
   font-size: 12.5px;
@@ -1002,13 +1224,76 @@ table.data-table tbody tr:last-child td {
   line-height: 1.6;
   margin: 0;
 }
+.landing-mini-bar {
+  margin-top: auto;
+}
+.landing-mini-bar .lbl {
+  font-size: 11px;
+  color: var(--color-gray-400);
+  margin-bottom: 6px;
+}
+.landing-mini-track {
+  height: 5px;
+  border-radius: 999px;
+  background: var(--color-gray-200);
+  overflow: hidden;
+}
+.landing-mini-fill {
+  height: 100%;
+  background: var(--color-accent);
+  border-radius: 999px;
+}
+
+/* ===== 랜딩 · 마무리 CTA 배너 ===== */
+.landing-cta-banner {
+  max-width: 1000px;
+  margin: 120px auto 0;
+  padding: 64px 32px;
+  border-radius: 24px;
+  background: var(--color-primary);
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.landing-cta-banner::before {
+  content: "";
+  position: absolute;
+  top: -120px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 600px;
+  height: 300px;
+  background: radial-gradient(closest-side, rgba(84, 184, 181, 0.25), transparent 70%);
+  pointer-events: none;
+}
+.landing-cta-banner h2 {
+  position: relative;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: #fff;
+  margin: 0 0 12px;
+}
+.landing-cta-banner p {
+  position: relative;
+  font-size: 14px;
+  color: #b9c6de;
+  margin: 0 0 28px;
+}
+.landing-cta-banner .btn-primary {
+  position: relative;
+  background: #fff;
+  color: var(--color-ink);
+}
 
 .landing-footer {
   max-width: 1000px;
   margin: 100px auto 0;
   padding: 28px 32px;
   border-top: 1px solid var(--color-gray-200);
-  text-align: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   font-size: 12px;
   color: var(--color-gray-400);
 }
@@ -1023,7 +1308,26 @@ table.data-table tbody tr:last-child td {
   .landing-bs-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+  .landing-split {
+    grid-template-columns: 1fr;
+  }
+  .landing-steps {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .landing-roles {
+    grid-template-columns: 1fr;
+  }
   .landing-features {
     grid-template-columns: 1fr 1fr;
+    grid-auto-rows: auto;
+  }
+  .landing-features > div.big {
+    grid-column: span 2;
+    grid-row: span 1;
+  }
+  .landing-footer {
+    flex-direction: column;
+    gap: 8px;
+    text-align: center;
   }
 }
