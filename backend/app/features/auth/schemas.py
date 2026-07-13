@@ -59,3 +59,20 @@ class CurrentUser(BaseModel):
     department: str | None
 
     model_config = {"from_attributes": True}
+
+
+class TeacherAdminItem(BaseModel):
+    id: int
+    email: str
+    name: str
+    role: Role
+    department: str | None
+    grade: int | None
+    class_no: int | None
+
+    model_config = {"from_attributes": True}
+
+
+class HomeroomAssignmentUpdate(BaseModel):
+    grade: int
+    class_no: int

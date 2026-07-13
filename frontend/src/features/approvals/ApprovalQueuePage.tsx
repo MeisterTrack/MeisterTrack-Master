@@ -15,6 +15,9 @@ export default function ApprovalQueuePage() {
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
   const [awardedScore, setAwardedScore] = useState<string>("");
+  const [selectedQueueIds, setSelectedQueueIds] = useState<Set<number>>(new Set());
+  const [selectedOnboardingIds, setSelectedOnboardingIds] = useState<Set<number>>(new Set());
+  const [bulkApproving, setBulkApproving] = useState(false);
 
   const { data: queue = [] } = useQuery({ queryKey: ["approval-queue"], queryFn: getPendingQueue });
   const selected = queue.find((item) => item.id === selectedId) ?? queue[0] ?? null;
@@ -58,18 +61,98 @@ export default function ApprovalQueuePage() {
     setRejectReason("");
   }
 
+  function toggleOnboardingSelection(id: number) {
+    setSelectedOnboardingIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllOnboarding() {
+    setSelectedOnboardingIds((prev) =>
+      prev.size === onboardingRequests.length ? new Set() : new Set(onboardingRequests.map((r) => r.id)),
+    );
+  }
+
+  async function handleBulkApproveOnboarding() {
+    setBulkApproving(true);
+    try {
+      await Promise.all(Array.from(selectedOnboardingIds).map((id) => decideOnboardingRequest(id, true)));
+      setSelectedOnboardingIds(new Set());
+      queryClient.invalidateQueries({ queryKey: ["onboarding-requests"] });
+    } finally {
+      setBulkApproving(false);
+    }
+  }
+
+  function toggleQueueSelection(id: number) {
+    setSelectedQueueIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function toggleAllQueue() {
+    setSelectedQueueIds((prev) => (prev.size === queue.length ? new Set() : new Set(queue.map((q) => q.id))));
+  }
+
+  async function handleBulkApproveQueue() {
+    setBulkApproving(true);
+    try {
+      await Promise.all(
+        Array.from(selectedQueueIds).map((id) => {
+          const item = queue.find((q) => q.id === id);
+          return decideSubmission(id, true, { awardedScore: item?.max_score });
+        }),
+      );
+      setSelectedQueueIds(new Set());
+      setSelectedId(null);
+      queryClient.invalidateQueries({ queryKey: ["approval-queue"] });
+    } finally {
+      setBulkApproving(false);
+    }
+  }
+
   return (
     <Layout>
       {role === "homeroom_teacher" && onboardingRequests.length > 0 && (
         <div className="card table-card" style={{ marginBottom: 20 }}>
           <div className="table-toolbar">
             <h3>가입 승인 대기 (학생)</h3>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <label style={{ fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedOnboardingIds.size === onboardingRequests.length}
+                  onChange={toggleAllOnboarding}
+                />
+                전체 선택
+              </label>
+              <button
+                className="tbtn solid"
+                disabled={selectedOnboardingIds.size === 0 || bulkApproving}
+                onClick={handleBulkApproveOnboarding}
+              >
+                선택 {selectedOnboardingIds.size}건 일괄 승인
+              </button>
+            </div>
           </div>
           {onboardingRequests.map((req) => (
             <div className="h-row" key={req.id}>
-              <div>
-                <div className="h-name">{req.name}</div>
-                <div className="h-sub">{req.email}</div>
+              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                <input
+                  type="checkbox"
+                  checked={selectedOnboardingIds.has(req.id)}
+                  onChange={() => toggleOnboardingSelection(req.id)}
+                />
+                <div>
+                  <div className="h-name">{req.name}</div>
+                  <div className="h-sub">{req.email}</div>
+                </div>
               </div>
               <div style={{ display: "flex", gap: 8 }}>
                 <button className="tbtn" onClick={() => onboardingDecisionMutation.mutate({ userId: req.id, approve: false })}>
@@ -93,6 +176,22 @@ export default function ApprovalQueuePage() {
             <h1>승인 대기</h1>
             <div className="sub">{queue.length}건 대기중</div>
           </div>
+          {queue.length > 0 && (
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0 20px 12px" }}>
+              <label style={{ fontSize: 12, display: "flex", alignItems: "center", gap: 6 }}>
+                <input type="checkbox" checked={selectedQueueIds.size === queue.length} onChange={toggleAllQueue} />
+                전체 선택
+              </label>
+              <button
+                className="tbtn solid"
+                style={{ fontSize: 11.5, padding: "6px 10px" }}
+                disabled={selectedQueueIds.size === 0 || bulkApproving}
+                onClick={handleBulkApproveQueue}
+              >
+                {selectedQueueIds.size}건 일괄 승인
+              </button>
+            </div>
+          )}
           {queue.map((item) => (
             <div
               key={item.id}
@@ -100,7 +199,15 @@ export default function ApprovalQueuePage() {
               onClick={() => selectItem(item)}
             >
               <div className="q-top">
-                <span className="q-name">{item.student_name}</span>
+                <span style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <input
+                    type="checkbox"
+                    checked={selectedQueueIds.has(item.id)}
+                    onClick={(e) => e.stopPropagation()}
+                    onChange={() => toggleQueueSelection(item.id)}
+                  />
+                  <span className="q-name">{item.student_name}</span>
+                </span>
                 <span className="q-time">{new Date(item.created_at).toLocaleDateString()}</span>
               </div>
               <div className="q-meta">

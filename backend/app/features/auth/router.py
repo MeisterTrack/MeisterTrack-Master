@@ -8,10 +8,12 @@ from app.features.auth.models import User
 from app.features.auth.schemas import (
     CurrentUser,
     GoogleMockLoginRequest,
+    HomeroomAssignmentUpdate,
     LoginResult,
     OnboardingDecision,
     OnboardingRequest,
     OnboardingResponse,
+    TeacherAdminItem,
 )
 
 router = APIRouter()
@@ -26,8 +28,10 @@ def google_mock_login(payload: GoogleMockLoginRequest, db: Session = Depends(get
     - pending: 온보딩은 했지만 담임/관리자 승인 대기중
     - ok: 정상 로그인, access_token 발급됨
     """
-    service.assert_allowed_domain(payload.email)
     user = service.find_user_by_email(db, payload.email)
+    # 기존 관리자 계정은 학교 도메인 제한 예외 (별도 프로비저닝, 학교 Workspace 계정 아닐 수 있음)
+    if user is None or user.role != Role.ADMIN:
+        service.assert_allowed_domain(payload.email)
 
     if user is None:
         return LoginResult(status="needs_onboarding", email=payload.email, name=payload.name)
@@ -71,3 +75,30 @@ def decide_onboarding_request(
 @router.get("/me", response_model=CurrentUser)
 def read_me(user: User = Depends(get_current_user)) -> CurrentUser:
     return user
+
+
+@router.get("/teachers", response_model=list[TeacherAdminItem])
+def list_teachers(
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> list[TeacherAdminItem]:
+    return service.list_teachers(db)
+
+
+@router.put("/teachers/{teacher_id}/homeroom", response_model=TeacherAdminItem)
+def set_homeroom(
+    teacher_id: int,
+    payload: HomeroomAssignmentUpdate,
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> TeacherAdminItem:
+    return service.set_homeroom_assignment(db, teacher_id, payload.grade, payload.class_no)
+
+
+@router.delete("/teachers/{teacher_id}/homeroom", response_model=TeacherAdminItem)
+def clear_homeroom(
+    teacher_id: int,
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> TeacherAdminItem:
+    return service.clear_homeroom_assignment(db, teacher_id)

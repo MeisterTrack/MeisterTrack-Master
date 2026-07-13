@@ -4,6 +4,7 @@ import ProtectedRoute from "./components/ProtectedRoute";
 import LandingPage from "./features/landing/LandingPage";
 import LoginPage from "./features/auth/LoginPage";
 import OnboardingPage from "./features/auth/OnboardingPage";
+import HomeroomAssignmentPage from "./features/auth/HomeroomAssignmentPage";
 import AdminDashboardPage from "./features/dashboard_admin/AdminDashboardPage";
 import StudentDashboardPage from "./features/dashboard_student/StudentDashboardPage";
 import StudentDetailPage from "./features/dashboard_student/StudentDetailPage";
@@ -57,6 +58,14 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AuditLogPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/homeroom-assignment"
+        element={
+          <ProtectedRoute>
+            <HomeroomAssignmentPage />
           </ProtectedRoute>
         }
       />

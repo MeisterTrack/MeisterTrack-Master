@@ -61,3 +61,28 @@ export async function getMe(): Promise<CurrentUser> {
   const { data } = await apiClient.get("/auth/me");
   return data;
 }
+
+export interface TeacherAdminItem {
+  id: number;
+  email: string;
+  name: string;
+  role: string;
+  department: string | null;
+  grade: number | null;
+  class_no: number | null;
+}
+
+export async function listTeachers(): Promise<TeacherAdminItem[]> {
+  const { data } = await apiClient.get("/auth/teachers");
+  return data;
+}
+
+export async function setHomeroom(teacherId: number, grade: number, classNo: number): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.put(`/auth/teachers/${teacherId}/homeroom`, { grade, class_no: classNo });
+  return data;
+}
+
+export async function clearHomeroom(teacherId: number): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.delete(`/auth/teachers/${teacherId}/homeroom`);
+  return data;
+}

@@ -100,6 +100,60 @@ def decide_onboarding(db: Session, user_id: int, approve: bool) -> User:
     return user
 
 
+def list_teachers(db: Session) -> list[User]:
+    return (
+        db.query(User)
+        .filter(
+            User.role.in_([Role.HOMEROOM_TEACHER, Role.AREA_TEACHER]),
+            User.approval_status == ApprovalStatus.APPROVED,
+        )
+        .order_by(User.name)
+        .all()
+    )
+
+
+def set_homeroom_assignment(db: Session, teacher_id: int, grade: int, class_no: int) -> User:
+    teacher = db.get(User, teacher_id)
+    if teacher is None:
+        raise NotFoundError(f"teacher {teacher_id} not found")
+    if teacher.role not in (Role.HOMEROOM_TEACHER, Role.AREA_TEACHER):
+        raise InvalidStateError("교사 계정만 담임으로 지정할 수 있습니다.")
+
+    # 반당 담임은 1명 — 이미 그 반에 배정된 다른 교사가 있으면 해제
+    existing = (
+        db.query(User)
+        .filter(
+            User.role == Role.HOMEROOM_TEACHER,
+            User.grade == grade,
+            User.class_no == class_no,
+            User.id != teacher_id,
+        )
+        .first()
+    )
+    if existing is not None:
+        existing.grade = None
+        existing.class_no = None
+
+    teacher.role = Role.HOMEROOM_TEACHER
+    teacher.grade = grade
+    teacher.class_no = class_no
+    teacher.department = HOMEROOM_DEPARTMENT
+    db.commit()
+    db.refresh(teacher)
+    return teacher
+
+
+def clear_homeroom_assignment(db: Session, teacher_id: int) -> User:
+    teacher = db.get(User, teacher_id)
+    if teacher is None:
+        raise NotFoundError(f"teacher {teacher_id} not found")
+    teacher.grade = None
+    teacher.class_no = None
+    db.commit()
+    db.refresh(teacher)
+    return teacher
+
+
 def _assign_teacher_domain(db: Session, teacher_id: int, domain: Domain) -> None:
     # approvals -> auth 역참조로 인한 순환 임포트를 피하기 위해 지연 임포트
     from app.features.approvals.models import TeacherDomainAssignment

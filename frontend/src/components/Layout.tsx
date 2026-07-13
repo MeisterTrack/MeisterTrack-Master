@@ -24,6 +24,7 @@ const ADMIN_NAV = [
   { to: "/dashboard/admin", label: "대시보드" },
   { to: "/bulk-grant", label: "일괄 부여" },
   { to: "/scoring-rules", label: "배점 규칙" },
+  { to: "/homeroom-assignment", label: "담임 배정" },
   { to: "/audit-log", label: "감사 로그" },
 ];
 
