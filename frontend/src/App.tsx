@@ -5,7 +5,9 @@ import LandingPage from "./features/landing/LandingPage";
 import LoginPage from "./features/auth/LoginPage";
 import OnboardingPage from "./features/auth/OnboardingPage";
 import HomeroomAssignmentPage from "./features/auth/HomeroomAssignmentPage";
+import TeacherManagementPage from "./features/auth/TeacherManagementPage";
 import AdminDashboardPage from "./features/dashboard_admin/AdminDashboardPage";
+import TeacherDashboardPage from "./features/dashboard_teacher/TeacherDashboardPage";
 import StudentDashboardPage from "./features/dashboard_student/StudentDashboardPage";
 import StudentDetailPage from "./features/dashboard_student/StudentDetailPage";
 import ApprovalQueuePage from "./features/approvals/ApprovalQueuePage";
@@ -90,6 +92,22 @@ export default function App() {
         element={
           <ProtectedRoute>
             <AdminDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/dashboard/teacher"
+        element={
+          <ProtectedRoute>
+            <TeacherDashboardPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/teacher-management"
+        element={
+          <ProtectedRoute>
+            <TeacherManagementPage />
           </ProtectedRoute>
         }
       />

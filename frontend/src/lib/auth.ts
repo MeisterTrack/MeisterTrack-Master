@@ -29,7 +29,7 @@ export function homeRouteForRole(role: string | null): string {
       return "/dashboard/student";
     case "area_teacher":
     case "homeroom_teacher":
-      return "/approvals";
+      return "/dashboard/teacher";
     case "admin":
       return "/dashboard/admin";
     default:

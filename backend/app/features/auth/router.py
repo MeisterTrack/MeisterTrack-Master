@@ -20,6 +20,8 @@ from app.features.auth.schemas import (
     OnboardingRequest,
     OnboardingResponse,
     TeacherAdminItem,
+    TeacherCreateRequest,
+    TeacherUpdateRequest,
 )
 
 router = APIRouter()
@@ -88,10 +90,48 @@ def read_me(user: User = Depends(get_current_user)) -> CurrentUser:
 
 @router.get("/teachers", response_model=list[TeacherAdminItem])
 def list_teachers(
+    include_inactive: bool = False,
     db: Session = Depends(get_db),
     _claims: dict = Depends(require_role(Role.ADMIN)),
 ) -> list[TeacherAdminItem]:
-    return service.list_teachers(db)
+    return service.list_teachers(db, include_inactive)
+
+
+@router.post("/teachers", response_model=TeacherAdminItem)
+def create_teacher(
+    payload: TeacherCreateRequest,
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> TeacherAdminItem:
+    return service.create_teacher(db, payload)
+
+
+@router.put("/teachers/{teacher_id}", response_model=TeacherAdminItem)
+def update_teacher(
+    teacher_id: int,
+    payload: TeacherUpdateRequest,
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> TeacherAdminItem:
+    return service.update_teacher(db, teacher_id, payload)
+
+
+@router.post("/teachers/{teacher_id}/deactivate", response_model=TeacherAdminItem)
+def deactivate_teacher(
+    teacher_id: int,
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> TeacherAdminItem:
+    return service.set_teacher_active(db, teacher_id, False)
+
+
+@router.post("/teachers/{teacher_id}/reactivate", response_model=TeacherAdminItem)
+def reactivate_teacher(
+    teacher_id: int,
+    db: Session = Depends(get_db),
+    _claims: dict = Depends(require_role(Role.ADMIN)),
+) -> TeacherAdminItem:
+    return service.set_teacher_active(db, teacher_id, True)
 
 
 @router.put("/teachers/{teacher_id}/homeroom", response_model=TeacherAdminItem)

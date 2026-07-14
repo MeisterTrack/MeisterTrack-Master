@@ -85,10 +85,44 @@ export interface TeacherAdminItem {
   department: string | null;
   grade: number | null;
   class_no: number | null;
+  approval_status: "pending" | "approved" | "rejected";
 }
 
 export async function listTeachers(): Promise<TeacherAdminItem[]> {
   const { data } = await apiClient.get("/auth/teachers");
+  return data;
+}
+
+export async function listAllTeachers(): Promise<TeacherAdminItem[]> {
+  const { data } = await apiClient.get("/auth/teachers", { params: { include_inactive: true } });
+  return data;
+}
+
+export interface TeacherCreatePayload {
+  email: string;
+  name: string;
+  department: string;
+  grade?: number;
+  class_no?: number;
+}
+
+export async function createTeacher(payload: TeacherCreatePayload): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.post("/auth/teachers", payload);
+  return data;
+}
+
+export async function updateTeacher(teacherId: number, name: string, department: string): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.put(`/auth/teachers/${teacherId}`, { name, department });
+  return data;
+}
+
+export async function deactivateTeacher(teacherId: number): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.post(`/auth/teachers/${teacherId}/deactivate`);
+  return data;
+}
+
+export async function reactivateTeacher(teacherId: number): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.post(`/auth/teachers/${teacherId}/reactivate`);
   return data;
 }
 

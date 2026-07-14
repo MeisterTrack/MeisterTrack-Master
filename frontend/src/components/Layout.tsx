@@ -17,6 +17,7 @@ const STUDENT_NAV = [
   { to: "/submissions", label: "제출하기" },
 ];
 const TEACHER_NAV = [
+  { to: "/dashboard/teacher", label: "대시보드" },
   { to: "/approvals", label: "승인함" },
   { to: "/bulk-grant", label: "일괄 부여" },
 ];
@@ -24,6 +25,7 @@ const ADMIN_NAV = [
   { to: "/dashboard/admin", label: "대시보드" },
   { to: "/bulk-grant", label: "일괄 부여" },
   { to: "/scoring-rules", label: "배점 규칙" },
+  { to: "/teacher-management", label: "교사 관리" },
   { to: "/homeroom-assignment", label: "담임 배정" },
   { to: "/audit-log", label: "감사 로그" },
 ];

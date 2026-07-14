@@ -83,6 +83,7 @@ class TeacherAdminItem(BaseModel):
     department: str | None
     grade: int | None
     class_no: int | None
+    approval_status: ApprovalStatus
 
     model_config = {"from_attributes": True}
 
@@ -90,3 +91,18 @@ class TeacherAdminItem(BaseModel):
 class HomeroomAssignmentUpdate(BaseModel):
     grade: int
     class_no: int
+
+
+class TeacherCreateRequest(BaseModel):
+    """관리자가 직접 교사 계정을 생성할 때 입력. 온보딩 승인 절차 없이 바로 APPROVED로 만들어진다."""
+
+    email: str
+    name: str
+    department: str  # 담임교사/산학협력부/전문교육부/체육교사/영어교과/국어교과
+    grade: int | None = None  # 담임교사일 때만
+    class_no: int | None = None  # 담임교사일 때만
+
+
+class TeacherUpdateRequest(BaseModel):
+    name: str
+    department: str

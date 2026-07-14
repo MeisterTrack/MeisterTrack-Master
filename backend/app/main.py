@@ -9,6 +9,7 @@ from app.features.audit_log import router as audit_log_router
 from app.features.auth import router as auth_router
 from app.features.dashboard_admin import router as dashboard_admin_router
 from app.features.dashboard_student import router as dashboard_student_router
+from app.features.dashboard_teacher import router as dashboard_teacher_router
 from app.features.scoring import router as scoring_router
 from app.features.submissions import router as submissions_router
 
@@ -28,6 +29,7 @@ app.include_router(approvals_router, prefix="/api/approvals", tags=["approvals"]
 app.include_router(scoring_router, prefix="/api/scoring", tags=["scoring"])
 app.include_router(dashboard_student_router, prefix="/api/dashboard/student", tags=["dashboard_student"])
 app.include_router(dashboard_admin_router, prefix="/api/dashboard/admin", tags=["dashboard_admin"])
+app.include_router(dashboard_teacher_router, prefix="/api/dashboard/teacher", tags=["dashboard_teacher"])
 app.include_router(audit_log_router, prefix="/api/audit-logs", tags=["audit_log"])
 
 
