@@ -24,7 +24,7 @@ export default function HomeroomAssignmentPage() {
   });
 
   function currentHomeroom(grade: number, classNo: number): TeacherAdminItem | undefined {
-    return teachers.find((t) => t.role === "homeroom_teacher" && t.grade === grade && t.class_no === classNo);
+    return teachers.find((t) => t.grade === grade && t.class_no === classNo);
   }
 
   function handleAssign(grade: number, classNo: number) {
@@ -80,7 +80,7 @@ export default function HomeroomAssignmentPage() {
                         <option value="">교사 선택</option>
                         {teachers.map((t) => (
                           <option key={t.id} value={t.id}>
-                            {t.name} ({t.department ?? t.role})
+                            {t.name} ({[t.department, t.subject].filter(Boolean).join("/") || "미지정"})
                           </option>
                         ))}
                       </select>

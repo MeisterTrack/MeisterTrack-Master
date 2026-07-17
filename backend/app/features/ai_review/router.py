@@ -13,7 +13,7 @@ router = APIRouter()
 def get_ai_review_result(
     submission_id: int,
     db: Session = Depends(get_db),
-    claims: dict = Depends(require_role(Role.AREA_TEACHER, Role.HOMEROOM_TEACHER, Role.ADMIN)),
+    claims: dict = Depends(require_role(Role.TEACHER, Role.ADMIN)),
 ) -> AiReviewResultResponse:
     result = service.get_result_for_submission(db, submission_id)
     if result is None:

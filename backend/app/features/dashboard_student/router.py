@@ -21,6 +21,6 @@ def get_my_dashboard(
 def get_student_detail(
     student_id: int,
     db: Session = Depends(get_db),
-    claims: dict = Depends(require_role(Role.AREA_TEACHER, Role.HOMEROOM_TEACHER, Role.ADMIN)),
+    claims: dict = Depends(require_role(Role.TEACHER, Role.ADMIN)),
 ) -> StudentDetailResponse:
     return service.build_student_detail(db, student_id)

@@ -14,6 +14,6 @@ router = APIRouter()
 def get_overview(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user),
-    _claims: dict = Depends(require_role(Role.HOMEROOM_TEACHER, Role.AREA_TEACHER)),
+    _claims: dict = Depends(require_role(Role.TEACHER)),
 ) -> TeacherOverviewResponse:
     return service.build_overview(db, user)

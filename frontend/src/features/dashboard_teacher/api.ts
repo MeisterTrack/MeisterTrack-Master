@@ -11,7 +11,7 @@ export interface TeacherDomainSummary {
 }
 
 export interface TeacherOverview {
-  role: string;
+  is_homeroom: boolean;
   pending_count: number;
   reviewed_today_count: number;
   assigned_domains: string[];

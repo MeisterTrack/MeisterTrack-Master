@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
 import Layout from "../../components/Layout";
-import { TEACHER_DEPARTMENTS } from "../../lib/domains";
+import { DEPARTMENT_OPTIONS, SUBJECT_OPTIONS } from "../../lib/domains";
 import {
   createTeacher,
   deactivateTeacher,
@@ -14,12 +14,6 @@ import {
 
 const GRADES = [1, 2, 3];
 const CLASSES = [1, 2, 3, 4, 5, 6];
-const HOMEROOM_DEPARTMENT = "담임교사";
-
-const ROLE_LABEL: Record<string, string> = {
-  homeroom_teacher: "담임교사",
-  area_teacher: "영역담당교사",
-};
 
 export default function TeacherManagementPage() {
   const queryClient = useQueryClient();
@@ -28,7 +22,9 @@ export default function TeacherManagementPage() {
   const [showForm, setShowForm] = useState(false);
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
-  const [department, setDepartment] = useState(TEACHER_DEPARTMENTS[0]);
+  const [department, setDepartment] = useState("");
+  const [subject, setSubject] = useState("");
+  const [isHomeroom, setIsHomeroom] = useState(false);
   const [grade, setGrade] = useState<number | "">("");
   const [classNo, setClassNo] = useState<number | "">("");
   const [formError, setFormError] = useState<string | null>(null);
@@ -36,6 +32,7 @@ export default function TeacherManagementPage() {
   const [editingId, setEditingId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
   const [editDepartment, setEditDepartment] = useState("");
+  const [editSubject, setEditSubject] = useState("");
 
   function invalidate() {
     queryClient.invalidateQueries({ queryKey: ["all-teachers"] });
@@ -49,7 +46,9 @@ export default function TeacherManagementPage() {
       setShowForm(false);
       setEmail("");
       setName("");
-      setDepartment(TEACHER_DEPARTMENTS[0]);
+      setDepartment("");
+      setSubject("");
+      setIsHomeroom(false);
       setGrade("");
       setClassNo("");
       setFormError(null);
@@ -58,8 +57,8 @@ export default function TeacherManagementPage() {
   });
 
   const updateMutation = useMutation({
-    mutationFn: ({ id, name, department }: { id: number; name: string; department: string }) =>
-      updateTeacher(id, name, department),
+    mutationFn: ({ id, name, department, subject }: { id: number; name: string; department: string; subject: string }) =>
+      updateTeacher(id, name, department || undefined, subject || undefined),
     onSuccess: () => {
       invalidate();
       setEditingId(null);
@@ -82,20 +81,22 @@ export default function TeacherManagementPage() {
     createMutation.mutate({
       email,
       name,
-      department,
-      grade: department === HOMEROOM_DEPARTMENT && grade !== "" ? Number(grade) : undefined,
-      class_no: department === HOMEROOM_DEPARTMENT && classNo !== "" ? Number(classNo) : undefined,
+      department: department || undefined,
+      subject: subject || undefined,
+      grade: isHomeroom && grade !== "" ? Number(grade) : undefined,
+      class_no: isHomeroom && classNo !== "" ? Number(classNo) : undefined,
     });
   }
 
   function startEdit(t: TeacherAdminItem) {
     setEditingId(t.id);
     setEditName(t.name);
-    setEditDepartment(t.department ?? TEACHER_DEPARTMENTS[0]);
+    setEditDepartment(t.department ?? "");
+    setEditSubject(t.subject ?? "");
   }
 
   function saveEdit(id: number) {
-    updateMutation.mutate({ id, name: editName, department: editDepartment });
+    updateMutation.mutate({ id, name: editName, department: editDepartment, subject: editSubject });
   }
 
   return (
@@ -124,42 +125,58 @@ export default function TeacherManagementPage() {
           </div>
           <div style={{ display: "flex", gap: 10 }}>
             <div className="field" style={{ flex: 1 }}>
-              <label>담당 교과/부서</label>
+              <label>담당 부서 (선택)</label>
               <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                {TEACHER_DEPARTMENTS.map((d) => (
+                <option value="">없음</option>
+                {DEPARTMENT_OPTIONS.map((d) => (
                   <option key={d} value={d}>
                     {d}
                   </option>
                 ))}
               </select>
             </div>
-            {department === HOMEROOM_DEPARTMENT && (
-              <>
-                <div className="field">
-                  <label>학년</label>
-                  <select value={grade} onChange={(e) => setGrade(e.target.value ? Number(e.target.value) : "")}>
-                    <option value="">선택</option>
-                    {GRADES.map((g) => (
-                      <option key={g} value={g}>
-                        {g}학년
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="field">
-                  <label>반</label>
-                  <select value={classNo} onChange={(e) => setClassNo(e.target.value ? Number(e.target.value) : "")}>
-                    <option value="">선택</option>
-                    {CLASSES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}반
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </>
-            )}
+            <div className="field" style={{ flex: 1 }}>
+              <label>담당 교과 (선택)</label>
+              <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+                <option value="">없음</option>
+                {SUBJECT_OPTIONS.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
+          <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13 }}>
+            <input type="checkbox" checked={isHomeroom} onChange={(e) => setIsHomeroom(e.target.checked)} />
+            담임 겸직 (부서/교과와 별개로 학급을 함께 배정할 수 있습니다)
+          </label>
+          {isHomeroom && (
+            <div style={{ display: "flex", gap: 10 }}>
+              <div className="field">
+                <label>학년</label>
+                <select value={grade} onChange={(e) => setGrade(e.target.value ? Number(e.target.value) : "")}>
+                  <option value="">선택</option>
+                  {GRADES.map((g) => (
+                    <option key={g} value={g}>
+                      {g}학년
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>반</label>
+                <select value={classNo} onChange={(e) => setClassNo(e.target.value ? Number(e.target.value) : "")}>
+                  <option value="">선택</option>
+                  {CLASSES.map((c) => (
+                    <option key={c} value={c}>
+                      {c}반
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
           {formError && <p style={{ color: "var(--color-danger)", fontSize: 12.5 }}>{formError}</p>}
           <button type="submit" className="tbtn solid" disabled={createMutation.isPending} style={{ alignSelf: "flex-start" }}>
             {createMutation.isPending ? "생성 중..." : "계정 생성"}
@@ -173,8 +190,8 @@ export default function TeacherManagementPage() {
             <tr>
               <th>이름</th>
               <th>이메일</th>
-              <th>구분</th>
-              <th>담당 교과/부서</th>
+              <th>담당 부서</th>
+              <th>담당 교과</th>
               <th>담임 학급</th>
               <th>상태</th>
               <th></th>
@@ -194,11 +211,11 @@ export default function TeacherManagementPage() {
                     )}
                   </td>
                   <td style={{ color: "var(--color-gray-400)" }}>{t.email}</td>
-                  <td>{ROLE_LABEL[t.role] ?? t.role}</td>
                   <td>
                     {isEditing ? (
                       <select value={editDepartment} onChange={(e) => setEditDepartment(e.target.value)}>
-                        {TEACHER_DEPARTMENTS.map((d) => (
+                        <option value="">없음</option>
+                        {DEPARTMENT_OPTIONS.map((d) => (
                           <option key={d} value={d}>
                             {d}
                           </option>
@@ -206,6 +223,20 @@ export default function TeacherManagementPage() {
                       </select>
                     ) : (
                       t.department ?? "-"
+                    )}
+                  </td>
+                  <td>
+                    {isEditing ? (
+                      <select value={editSubject} onChange={(e) => setEditSubject(e.target.value)}>
+                        <option value="">없음</option>
+                        {SUBJECT_OPTIONS.map((s) => (
+                          <option key={s} value={s}>
+                            {s}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      t.subject ?? "-"
                     )}
                   </td>
                   <td>{t.grade && t.class_no ? `${t.grade}학년 ${t.class_no}반` : "-"}</td>

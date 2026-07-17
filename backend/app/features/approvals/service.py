@@ -26,19 +26,20 @@ def assign_domain(db: Session, payload: TeacherDomainAssignmentCreate) -> Teache
     return assignment
 
 
-def list_pending_for_area_teacher(db: Session, teacher_id: int) -> list[Submission]:
+def list_pending_for_assigned_domains(db: Session, teacher_id: int) -> list[Submission]:
+    """부서/교과 배정(TeacherDomainAssignment)에 따른 담당 영역 승인 대기 건."""
     domains = get_assigned_domains(db, teacher_id)
     if not domains:
         return []
     return (
         db.query(Submission)
         .filter(Submission.domain.in_(domains), Submission.status == ApprovalStatus.PENDING)
-        .order_by(Submission.created_at.asc())
         .all()
     )
 
 
-def list_pending_for_homeroom_teacher(db: Session, teacher_id: int) -> list[Submission]:
+def list_pending_for_homeroom_class(db: Session, teacher_id: int) -> list[Submission]:
+    """담임 학급(grade/class_no) 학생의 학교생활·인문 분야 승인 대기 건. 담임 여부는 role이 아닌 grade/class_no로 판단."""
     teacher = db.get(User, teacher_id)
     if teacher is None or teacher.grade is None or teacher.class_no is None:
         return []
@@ -51,21 +52,20 @@ def list_pending_for_homeroom_teacher(db: Session, teacher_id: int) -> list[Subm
             User.grade == teacher.grade,
             User.class_no == teacher.class_no,
         )
-        .order_by(Submission.created_at.asc())
         .all()
     )
 
 
-def list_pending_queue(db: Session, teacher_id: int, role: str) -> list[Submission]:
-    if role == Role.AREA_TEACHER.value:
-        return list_pending_for_area_teacher(db, teacher_id)
-    if role == Role.HOMEROOM_TEACHER.value:
-        return list_pending_for_homeroom_teacher(db, teacher_id)
-    return []
+def list_pending_queue(db: Session, teacher_id: int) -> list[Submission]:
+    """담당 영역(부서/교과) 배정분과 담임 학급분을 합쳐서 반환 — 겸직 가능하므로 역할 분기 없이 합집합."""
+    merged: dict[int, Submission] = {
+        s.id: s for s in [*list_pending_for_assigned_domains(db, teacher_id), *list_pending_for_homeroom_class(db, teacher_id)]
+    }
+    return sorted(merged.values(), key=lambda s: s.created_at)
 
 
-def build_queue_response(db: Session, teacher_id: int, role: str) -> list[QueueItemResponse]:
-    submissions = list_pending_queue(db, teacher_id, role)
+def build_queue_response(db: Session, teacher_id: int) -> list[QueueItemResponse]:
+    submissions = list_pending_queue(db, teacher_id)
     if not submissions:
         return []
 

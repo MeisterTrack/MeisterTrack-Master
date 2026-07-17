@@ -42,10 +42,11 @@ class OnboardingRequest(BaseModel):
     email: str
     name: str
     role: Literal["student", "teacher"]
-    grade: int | None = None  # 학생: 학년 / 담임교사: 담당 학급 학년
-    class_no: int | None = None  # 학생: 반 / 담임교사: 담당 학급 반
+    grade: int | None = None  # 학생: 학년 / 교사: 담임 학급 학년(담임인 경우만)
+    class_no: int | None = None  # 학생: 반 / 교사: 담임 학급 반(담임인 경우만)
     student_no: str | None = None  # 학생만
-    department: str | None = None  # 교사만: 담임교사/산학협력부/전문교육부/체육교사/영어교과/국어교과
+    department: str | None = None  # 교사만: 담당 부서 (산학협력부/전문교육부)
+    subject: str | None = None  # 교사만: 담당 교과 (국어/영어/체육)
 
 
 class OnboardingResponse(BaseModel):
@@ -71,6 +72,7 @@ class CurrentUser(BaseModel):
     class_no: int | None
     student_no: str | None
     department: str | None
+    subject: str | None
 
     model_config = {"from_attributes": True}
 
@@ -81,6 +83,7 @@ class TeacherAdminItem(BaseModel):
     name: str
     role: Role
     department: str | None
+    subject: str | None
     grade: int | None
     class_no: int | None
     approval_status: ApprovalStatus
@@ -94,15 +97,20 @@ class HomeroomAssignmentUpdate(BaseModel):
 
 
 class TeacherCreateRequest(BaseModel):
-    """관리자가 직접 교사 계정을 생성할 때 입력. 온보딩 승인 절차 없이 바로 APPROVED로 만들어진다."""
+    """관리자가 직접 교사 계정을 생성할 때 입력. 온보딩 승인 절차 없이 바로 APPROVED로 만들어진다.
+
+    담임 여부(grade/class_no)와 담당 부서/교과는 서로 독립적 — 겸직 가능.
+    """
 
     email: str
     name: str
-    department: str  # 담임교사/산학협력부/전문교육부/체육교사/영어교과/국어교과
-    grade: int | None = None  # 담임교사일 때만
-    class_no: int | None = None  # 담임교사일 때만
+    department: str | None = None  # 산학협력부/전문교육부
+    subject: str | None = None  # 국어/영어/체육
+    grade: int | None = None  # 담임 학급 학년 (담임인 경우만)
+    class_no: int | None = None  # 담임 학급 반 (담임인 경우만)
 
 
 class TeacherUpdateRequest(BaseModel):
     name: str
-    department: str
+    department: str | None = None
+    subject: str | None = None

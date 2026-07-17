@@ -8,7 +8,8 @@ export const DOMAIN_LABEL: Record<string, string> = {
 
 export const DOMAINS = Object.keys(DOMAIN_LABEL);
 
-export const TEACHER_DEPARTMENTS = ["담임교사", "산학협력부", "전문교육부", "체육교사", "영어교과", "국어교과"];
+export const DEPARTMENT_OPTIONS = ["산학협력부", "전문교육부"];
+export const SUBJECT_OPTIONS = ["국어", "영어", "체육"];
 
 export const GRADE_COLOR: Record<string, string> = {
   S: "var(--color-success)",

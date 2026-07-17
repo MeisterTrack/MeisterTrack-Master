@@ -1,7 +1,7 @@
 import { FormEvent, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 
-import { TEACHER_DEPARTMENTS } from "../../lib/domains";
+import { DEPARTMENT_OPTIONS, SUBJECT_OPTIONS } from "../../lib/domains";
 import { submitOnboarding } from "./api";
 
 interface LocationState {
@@ -18,7 +18,9 @@ export default function OnboardingPage() {
   const [grade, setGrade] = useState(1);
   const [classNo, setClassNo] = useState(1);
   const [studentNo, setStudentNo] = useState("");
-  const [department, setDepartment] = useState(TEACHER_DEPARTMENTS[0]);
+  const [isHomeroom, setIsHomeroom] = useState(false);
+  const [department, setDepartment] = useState("");
+  const [subject, setSubject] = useState("");
   const [submitted, setSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -34,7 +36,7 @@ export default function OnboardingPage() {
     );
   }
 
-  const isHomeroom = role === "teacher" && department === "담임교사";
+  const showHomeroomFields = role === "student" || (role === "teacher" && isHomeroom);
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault();
@@ -45,10 +47,11 @@ export default function OnboardingPage() {
         email: state.email!,
         name: state.name!,
         role,
-        grade: role === "student" || isHomeroom ? grade : undefined,
-        class_no: role === "student" || isHomeroom ? classNo : undefined,
+        grade: showHomeroomFields ? grade : undefined,
+        class_no: showHomeroomFields ? classNo : undefined,
         student_no: role === "student" ? studentNo : undefined,
-        department: role === "teacher" ? department : undefined,
+        department: role === "teacher" && department ? department : undefined,
+        subject: role === "teacher" && subject ? subject : undefined,
       });
       setSubmitted(true);
     } catch {
@@ -182,16 +185,10 @@ export default function OnboardingPage() {
 
         {role === "teacher" && (
           <>
-            <div className="field">
-              <label>담당 교과/부서</label>
-              <select value={department} onChange={(e) => setDepartment(e.target.value)}>
-                {TEACHER_DEPARTMENTS.map((dept) => (
-                  <option key={dept} value={dept}>
-                    {dept}
-                  </option>
-                ))}
-              </select>
-            </div>
+            <label style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, marginBottom: 14 }}>
+              <input type="checkbox" checked={isHomeroom} onChange={(e) => setIsHomeroom(e.target.checked)} />
+              담임을 맡고 있어요
+            </label>
             {isHomeroom && (
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
                 <div className="field">
@@ -214,6 +211,30 @@ export default function OnboardingPage() {
                 </div>
               </div>
             )}
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+              <div className="field">
+                <label>담당 부서 (선택)</label>
+                <select value={department} onChange={(e) => setDepartment(e.target.value)}>
+                  <option value="">없음</option>
+                  {DEPARTMENT_OPTIONS.map((dept) => (
+                    <option key={dept} value={dept}>
+                      {dept}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="field">
+                <label>담당 교과 (선택)</label>
+                <select value={subject} onChange={(e) => setSubject(e.target.value)}>
+                  <option value="">없음</option>
+                  {SUBJECT_OPTIONS.map((subj) => (
+                    <option key={subj} value={subj}>
+                      {subj}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
           </>
         )}
 

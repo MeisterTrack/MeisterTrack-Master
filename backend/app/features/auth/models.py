@@ -15,5 +15,6 @@ class User(Base):
     grade: Mapped[int | None] = mapped_column(nullable=True)  # 학생: 학년(1/2/3) / 담임교사: 담당 학급 학년
     class_no: Mapped[int | None] = mapped_column(nullable=True)  # 학생: 반 / 담임교사: 담당 학급 반
     student_no: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 학생: 학번
-    department: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 교사: 온보딩 시 선택한 담당 교과/부서
+    department: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 교사: 담당 부서 (산학협력부/전문교육부 등)
+    subject: Mapped[str | None] = mapped_column(String(50), nullable=True)  # 교사: 담당 교과 (국어/영어/체육 등)
     approval_status: Mapped[ApprovalStatus] = mapped_column(Enum(ApprovalStatus), default=ApprovalStatus.PENDING)

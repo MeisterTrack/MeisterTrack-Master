@@ -68,7 +68,7 @@ def onboarding(payload: OnboardingRequest, db: Session = Depends(get_db)) -> Onb
 def list_onboarding_requests(
     db: Session = Depends(get_db),
     reviewer: User = Depends(get_current_user),
-    _claims: dict = Depends(require_role(Role.HOMEROOM_TEACHER, Role.ADMIN)),
+    _claims: dict = Depends(require_role(Role.TEACHER, Role.ADMIN)),
 ) -> list[OnboardingResponse]:
     return service.list_pending_onboarding(db, reviewer)
 
@@ -78,9 +78,10 @@ def decide_onboarding_request(
     user_id: int,
     decision: OnboardingDecision,
     db: Session = Depends(get_db),
-    _claims: dict = Depends(require_role(Role.HOMEROOM_TEACHER, Role.ADMIN)),
+    reviewer: User = Depends(get_current_user),
+    _claims: dict = Depends(require_role(Role.TEACHER, Role.ADMIN)),
 ) -> OnboardingResponse:
-    return service.decide_onboarding(db, user_id, decision.approve)
+    return service.decide_onboarding(db, reviewer, user_id, decision.approve)
 
 
 @router.get("/me", response_model=CurrentUser)

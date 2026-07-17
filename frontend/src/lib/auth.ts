@@ -27,8 +27,7 @@ export function homeRouteForRole(role: string | null): string {
   switch (role) {
     case "student":
       return "/dashboard/student";
-    case "area_teacher":
-    case "homeroom_teacher":
+    case "teacher":
       return "/dashboard/teacher";
     case "admin":
       return "/dashboard/admin";

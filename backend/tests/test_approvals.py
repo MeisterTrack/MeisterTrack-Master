@@ -28,7 +28,7 @@ def _make_submission(db, student_id, domain, status=ApprovalStatus.PENDING):
 
 
 def test_decide_approve_updates_status_and_writes_audit_log(db):
-    reviewer = _make_user(db, Role.AREA_TEACHER)
+    reviewer = _make_user(db, Role.TEACHER)
     submission = _make_submission(db, student_id=1, domain=Domain.TECHNICAL_COMPETENCY)
 
     result = approvals_service.decide(db, submission.id, reviewer.id, ApprovalDecision(approve=True))
@@ -41,7 +41,7 @@ def test_decide_approve_updates_status_and_writes_audit_log(db):
 
 
 def test_decide_reject_stores_reason(db):
-    reviewer = _make_user(db, Role.AREA_TEACHER)
+    reviewer = _make_user(db, Role.TEACHER)
     submission = _make_submission(db, student_id=1, domain=Domain.TECHNICAL_COMPETENCY)
 
     result = approvals_service.decide(
@@ -53,7 +53,7 @@ def test_decide_reject_stores_reason(db):
 
 
 def test_decide_twice_raises_invalid_state(db):
-    reviewer = _make_user(db, Role.AREA_TEACHER)
+    reviewer = _make_user(db, Role.TEACHER)
     submission = _make_submission(db, student_id=1, domain=Domain.TECHNICAL_COMPETENCY)
     approvals_service.decide(db, submission.id, reviewer.id, ApprovalDecision(approve=True))
 
@@ -62,27 +62,27 @@ def test_decide_twice_raises_invalid_state(db):
 
 
 def test_decide_missing_submission_raises_not_found(db):
-    reviewer = _make_user(db, Role.AREA_TEACHER)
+    reviewer = _make_user(db, Role.TEACHER)
 
     with pytest.raises(NotFoundError):
         approvals_service.decide(db, 9999, reviewer.id, ApprovalDecision(approve=True))
 
 
-def test_list_pending_for_area_teacher_filters_by_assigned_domain(db):
-    teacher = _make_user(db, Role.AREA_TEACHER)
+def test_list_pending_for_assigned_domains_filters_by_assignment(db):
+    teacher = _make_user(db, Role.TEACHER)
     db.add(TeacherDomainAssignment(teacher_id=teacher.id, domain=Domain.TECHNICAL_COMPETENCY))
     db.commit()
 
     matching = _make_submission(db, student_id=1, domain=Domain.TECHNICAL_COMPETENCY)
     _make_submission(db, student_id=1, domain=Domain.FOREIGN_LANGUAGE)  # 담당 아님
 
-    queue = approvals_service.list_pending_for_area_teacher(db, teacher.id)
+    queue = approvals_service.list_pending_for_assigned_domains(db, teacher.id)
 
     assert [s.id for s in queue] == [matching.id]
 
 
-def test_list_pending_for_homeroom_teacher_filters_by_class(db):
-    teacher = _make_user(db, Role.HOMEROOM_TEACHER, grade=1, class_no=2)
+def test_list_pending_for_homeroom_class_filters_by_class(db):
+    teacher = _make_user(db, Role.TEACHER, grade=1, class_no=2)
     same_class_student = _make_user(db, Role.STUDENT, grade=1, class_no=2)
     other_class_student = _make_user(db, Role.STUDENT, grade=1, class_no=3)
 
@@ -90,6 +90,21 @@ def test_list_pending_for_homeroom_teacher_filters_by_class(db):
     _make_submission(db, other_class_student.id, Domain.CHARACTER_WORK_ETHIC)  # 다른 반
     _make_submission(db, same_class_student.id, Domain.TECHNICAL_COMPETENCY)  # 담임 담당 영역 아님
 
-    queue = approvals_service.list_pending_for_homeroom_teacher(db, teacher.id)
+    queue = approvals_service.list_pending_for_homeroom_class(db, teacher.id)
 
     assert [s.id for s in queue] == [matching.id]
+
+
+def test_list_pending_queue_combines_domain_and_homeroom_class(db):
+    """겸직: 담당 영역 배정 + 담임 학급을 동시에 가진 교사는 두 큐가 합쳐져야 한다."""
+    teacher = _make_user(db, Role.TEACHER, grade=1, class_no=2)
+    db.add(TeacherDomainAssignment(teacher_id=teacher.id, domain=Domain.TECHNICAL_COMPETENCY))
+    db.commit()
+    same_class_student = _make_user(db, Role.STUDENT, grade=1, class_no=2)
+
+    from_domain = _make_submission(db, student_id=99, domain=Domain.TECHNICAL_COMPETENCY)
+    from_homeroom = _make_submission(db, same_class_student.id, Domain.CHARACTER_WORK_ETHIC)
+
+    queue = approvals_service.list_pending_queue(db, teacher.id)
+
+    assert {s.id for s in queue} == {from_domain.id, from_homeroom.id}

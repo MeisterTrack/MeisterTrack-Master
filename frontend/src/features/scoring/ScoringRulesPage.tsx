@@ -2,7 +2,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { FormEvent, useState } from "react";
 
 import Layout from "../../components/Layout";
-import { DOMAINS, DOMAIN_LABEL, TEACHER_DEPARTMENTS } from "../../lib/domains";
+import { DEPARTMENT_OPTIONS, DOMAINS, DOMAIN_LABEL, SUBJECT_OPTIONS } from "../../lib/domains";
+
+// 배점 규칙의 "입력 담당" 표시용 — 실제 권한 체계와 무관한 자유 라벨이라 담임까지 포함한 전체 목록을 보여준다.
+const OWNER_DEPARTMENT_OPTIONS = ["담임교사", ...DEPARTMENT_OPTIONS, ...SUBJECT_OPTIONS];
 import {
   createGradeThreshold,
   createScoringCriterion,
@@ -18,7 +21,7 @@ export default function ScoringRulesPage() {
   const [showAddPanel, setShowAddPanel] = useState(false);
   const [name, setName] = useState("");
   const [maxScore, setMaxScore] = useState("");
-  const [ownerDepartment, setOwnerDepartment] = useState(TEACHER_DEPARTMENTS[0]);
+  const [ownerDepartment, setOwnerDepartment] = useState(OWNER_DEPARTMENT_OPTIONS[0]);
   const [applicableGrade, setApplicableGrade] = useState("");
 
   const { data: criteria = [] } = useQuery({
@@ -113,7 +116,7 @@ export default function ScoringRulesPage() {
             <div className="field" style={{ margin: 0 }}>
               <label>입력 담당</label>
               <select value={ownerDepartment} onChange={(e) => setOwnerDepartment(e.target.value)}>
-                {TEACHER_DEPARTMENTS.map((dept) => (
+                {OWNER_DEPARTMENT_OPTIONS.map((dept) => (
                   <option key={dept} value={dept}>
                     {dept}
                   </option>

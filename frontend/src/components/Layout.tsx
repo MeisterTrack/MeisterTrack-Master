@@ -7,8 +7,7 @@ import { getRole, logout } from "../lib/auth";
 
 const ROLE_LABEL: Record<string, string> = {
   student: "학생",
-  homeroom_teacher: "담임교사",
-  area_teacher: "영역담당교사",
+  teacher: "교사",
   admin: "관리자",
 };
 
@@ -55,7 +54,11 @@ export default function Layout({ children }: { children: ReactNode }) {
       ? [me.grade ? `${me.grade}학년` : null, me.class_no ? `${me.class_no}반` : null, me.student_no]
           .filter(Boolean)
           .join(" · ")
-      : me?.department ?? "";
+      : me?.role === "teacher"
+        ? [me.department, me.subject, me.grade && me.class_no ? `${me.grade}학년 ${me.class_no}반 담임` : null]
+            .filter(Boolean)
+            .join(" · ")
+        : "";
 
   return (
     <div className="shell">

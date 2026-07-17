@@ -3,14 +3,14 @@ import { useEffect, useState } from "react";
 
 import Layout from "../../components/Layout";
 import { getAiReviewResult } from "../ai_review/api";
-import { decideOnboardingRequest, listOnboardingRequests } from "../auth/api";
-import { getRole } from "../../lib/auth";
+import { decideOnboardingRequest, getMe, listOnboardingRequests } from "../auth/api";
 import { DOMAIN_LABEL } from "../../lib/domains";
 import { decideSubmission, getPendingQueue, QueueItem } from "./api";
 
 export default function ApprovalQueuePage() {
   const queryClient = useQueryClient();
-  const role = getRole();
+  const { data: me } = useQuery({ queryKey: ["me"], queryFn: getMe });
+  const isHomeroom = me?.grade != null && me?.class_no != null;
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [showReject, setShowReject] = useState(false);
@@ -35,7 +35,7 @@ export default function ApprovalQueuePage() {
   const { data: onboardingRequests = [] } = useQuery({
     queryKey: ["onboarding-requests"],
     queryFn: listOnboardingRequests,
-    enabled: role === "homeroom_teacher",
+    enabled: isHomeroom,
   });
 
   const onboardingDecisionMutation = useMutation({
@@ -119,7 +119,7 @@ export default function ApprovalQueuePage() {
 
   return (
     <Layout>
-      {role === "homeroom_teacher" && onboardingRequests.length > 0 && (
+      {isHomeroom && onboardingRequests.length > 0 && (
         <div className="card table-card" style={{ marginBottom: 20 }}>
           <div className="table-toolbar">
             <h3>가입 승인 대기 (학생)</h3>

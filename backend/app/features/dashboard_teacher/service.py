@@ -51,7 +51,7 @@ def _domain_summary(db: Session, domain: Domain, student_ids: list[int] | None) 
 
 
 def build_overview(db: Session, teacher: User) -> TeacherOverviewResponse:
-    pending_count = len(approvals_service.list_pending_queue(db, teacher.id, teacher.role.value))
+    pending_count = len(approvals_service.list_pending_queue(db, teacher.id))
 
     today_start = datetime.combine(datetime.utcnow().date(), time.min)
     reviewed_today_count = (
@@ -65,36 +65,45 @@ def build_overview(db: Session, teacher: User) -> TeacherOverviewResponse:
         or 0
     )
 
+    is_homeroom = teacher.grade is not None and teacher.class_no is not None
     class_student_count = None
     class_submitted_count = None
-    if teacher.role == Role.HOMEROOM_TEACHER:
-        domains = approvals_service.HOMEROOM_DOMAINS
-        student_ids = [
+    homeroom_student_ids: list[int] = []
+
+    if is_homeroom:
+        homeroom_student_ids = [
             row[0]
             for row in db.query(User.id)
             .filter(User.role == Role.STUDENT, User.grade == teacher.grade, User.class_no == teacher.class_no)
             .all()
         ]
-        class_student_count = len(student_ids)
+        class_student_count = len(homeroom_student_ids)
         class_submitted_count = (
             db.query(func.count(func.distinct(Submission.student_id)))
-            .filter(Submission.student_id.in_(student_ids or [-1]))
+            .filter(Submission.student_id.in_(homeroom_student_ids or [-1]))
             .scalar()
             or 0
         )
-    else:
-        domains = approvals_service.get_assigned_domains(db, teacher.id)
-        student_ids = None  # 전교생 대상 (영역 담당교사는 반 구분 없이 담당 영역 전체를 봄)
 
-    domain_summaries = [_domain_summary(db, domain, student_ids) for domain in domains]
+    assigned_domains = approvals_service.get_assigned_domains(db, teacher.id)
+
+    # 담임 학급 학생 대상(homeroom_student_ids) + 부서/교과 배정 영역(전교생 대상, None)을 합쳐서 영역별 현황 계산
+    domain_scope: dict[Domain, list[int] | None] = {}
+    if is_homeroom:
+        for domain in approvals_service.HOMEROOM_DOMAINS:
+            domain_scope[domain] = homeroom_student_ids
+    for domain in assigned_domains:
+        domain_scope.setdefault(domain, None)
+
+    domain_summaries = [_domain_summary(db, domain, scope) for domain, scope in domain_scope.items()]
 
     return TeacherOverviewResponse(
-        role=teacher.role,
         pending_count=pending_count,
         reviewed_today_count=reviewed_today_count,
-        assigned_domains=domains,
-        homeroom_grade=teacher.grade if teacher.role == Role.HOMEROOM_TEACHER else None,
-        homeroom_class_no=teacher.class_no if teacher.role == Role.HOMEROOM_TEACHER else None,
+        is_homeroom=is_homeroom,
+        assigned_domains=assigned_domains,
+        homeroom_grade=teacher.grade if is_homeroom else None,
+        homeroom_class_no=teacher.class_no if is_homeroom else None,
         class_student_count=class_student_count,
         class_submitted_count=class_submitted_count,
         class_not_submitted_count=(

@@ -3,8 +3,7 @@ import enum
 
 class Role(str, enum.Enum):
     STUDENT = "student"
-    HOMEROOM_TEACHER = "homeroom_teacher"
-    AREA_TEACHER = "area_teacher"
+    TEACHER = "teacher"  # 담임 여부는 role이 아니라 grade/class_no 값으로 판단 (겸직 가능)
     ADMIN = "admin"
 
 

@@ -36,6 +36,7 @@ export interface OnboardingPayload {
   class_no?: number;
   student_no?: string;
   department?: string;
+  subject?: string;
 }
 
 export async function submitOnboarding(payload: OnboardingPayload) {
@@ -70,6 +71,7 @@ export interface CurrentUser {
   class_no: number | null;
   student_no: string | null;
   department: string | null;
+  subject: string | null;
 }
 
 export async function getMe(): Promise<CurrentUser> {
@@ -83,6 +85,7 @@ export interface TeacherAdminItem {
   name: string;
   role: string;
   department: string | null;
+  subject: string | null;
   grade: number | null;
   class_no: number | null;
   approval_status: "pending" | "approved" | "rejected";
@@ -101,7 +104,8 @@ export async function listAllTeachers(): Promise<TeacherAdminItem[]> {
 export interface TeacherCreatePayload {
   email: string;
   name: string;
-  department: string;
+  department?: string;
+  subject?: string;
   grade?: number;
   class_no?: number;
 }
@@ -111,8 +115,13 @@ export async function createTeacher(payload: TeacherCreatePayload): Promise<Teac
   return data;
 }
 
-export async function updateTeacher(teacherId: number, name: string, department: string): Promise<TeacherAdminItem> {
-  const { data } = await apiClient.put(`/auth/teachers/${teacherId}`, { name, department });
+export async function updateTeacher(
+  teacherId: number,
+  name: string,
+  department: string | undefined,
+  subject: string | undefined,
+): Promise<TeacherAdminItem> {
+  const { data } = await apiClient.put(`/auth/teachers/${teacherId}`, { name, department, subject });
   return data;
 }
 

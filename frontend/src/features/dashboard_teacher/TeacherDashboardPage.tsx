@@ -7,13 +7,14 @@ import { getTeacherOverview } from "./api";
 
 export default function TeacherDashboardPage() {
   const { data } = useQuery({ queryKey: ["teacher-overview"], queryFn: getTeacherOverview });
-  const isHomeroom = data?.role === "homeroom_teacher";
+  const isHomeroom = data?.is_homeroom ?? false;
+  const hasAssignedDomains = (data?.assigned_domains.length ?? 0) > 0;
 
   return (
     <Layout>
       <div className="topbar">
         <div>
-          <h1>{isHomeroom ? "담임 대시보드" : "영역 담당 대시보드"}</h1>
+          <h1>교사 대시보드</h1>
           <div className="sub">
             {isHomeroom && data?.homeroom_grade
               ? `${data.homeroom_grade}학년 ${data.homeroom_class_no}반 담임`
@@ -34,7 +35,7 @@ export default function TeacherDashboardPage() {
           <div className="l">오늘 처리 건수</div>
           <div className="v mono">{data?.reviewed_today_count ?? "-"}</div>
         </div>
-        {isHomeroom ? (
+        {isHomeroom && (
           <>
             <div className="card metric-card">
               <div className="l">우리 반 학생 수</div>
@@ -45,7 +46,8 @@ export default function TeacherDashboardPage() {
               <div className="v mono warn">{data?.class_not_submitted_count ?? "-"}</div>
             </div>
           </>
-        ) : (
+        )}
+        {hasAssignedDomains && (
           <div className="card metric-card">
             <div className="l">담당 영역 수</div>
             <div className="v mono">{data?.assigned_domains.length ?? "-"}</div>
@@ -75,7 +77,7 @@ export default function TeacherDashboardPage() {
         })}
         {data && data.domain_summaries.length === 0 && (
           <div style={{ color: "var(--color-gray-400)", fontSize: 13, padding: "8px 0" }}>
-            아직 배정된 담당 영역이 없습니다.
+            아직 담당 영역(부서/교과/담임 학급)이 배정되지 않았습니다.
           </div>
         )}
       </div>

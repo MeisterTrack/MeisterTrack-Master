@@ -17,15 +17,15 @@ from app.features.submissions.schemas import SubmissionResponse
 
 router = APIRouter()
 
-BULK_GRANT_ROLES = (Role.AREA_TEACHER, Role.HOMEROOM_TEACHER, Role.ADMIN)
+BULK_GRANT_ROLES = (Role.TEACHER, Role.ADMIN)
 
 
 @router.get("/queue", response_model=list[QueueItemResponse])
 def get_pending_queue(
     db: Session = Depends(get_db),
-    claims: dict = Depends(require_role(Role.AREA_TEACHER, Role.HOMEROOM_TEACHER)),
+    claims: dict = Depends(require_role(Role.TEACHER)),
 ) -> list[QueueItemResponse]:
-    return service.build_queue_response(db, teacher_id=int(claims["sub"]), role=claims["role"])
+    return service.build_queue_response(db, teacher_id=int(claims["sub"]))
 
 
 @router.post("/{submission_id}/decision", response_model=SubmissionResponse)
@@ -33,7 +33,7 @@ def decide_submission(
     submission_id: int,
     decision: ApprovalDecision,
     db: Session = Depends(get_db),
-    claims: dict = Depends(require_role(Role.AREA_TEACHER, Role.HOMEROOM_TEACHER)),
+    claims: dict = Depends(require_role(Role.TEACHER)),
 ) -> SubmissionResponse:
     return service.decide(db, submission_id, reviewer_id=int(claims["sub"]), decision=decision)
 

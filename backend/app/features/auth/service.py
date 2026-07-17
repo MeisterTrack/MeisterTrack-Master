@@ -9,16 +9,19 @@ from app.core.security import create_access_token
 from app.features.auth.models import User
 from app.features.auth.schemas import LoginResult, OnboardingRequest, TeacherCreateRequest, TeacherUpdateRequest
 
-# 온보딩에서 교사가 선택하는 담당 부서 -> 실제 담당 영역 매핑 (F-6, 운영계획서 II장 입력담당 기준)
+# 담당 부서 -> 실제 담당 영역 매핑 (F-6, 운영계획서 II장 입력담당 기준)
 DEPARTMENT_DOMAIN_MAP: dict[str, Domain] = {
     "산학협력부": Domain.TECHNICAL_COMPETENCY,
     "전문교육부": Domain.TECHNICAL_COMPETENCY,
-    "체육교사": Domain.CHARACTER_WORK_ETHIC,
-    "영어교과": Domain.FOREIGN_LANGUAGE,
-    "국어교과": Domain.HUMANITIES_LITERACY,
 }
-HOMEROOM_DEPARTMENT = "담임교사"
-TEACHER_DEPARTMENTS = [HOMEROOM_DEPARTMENT, *DEPARTMENT_DOMAIN_MAP.keys()]
+# 담당 교과 -> 실제 담당 영역 매핑
+SUBJECT_DOMAIN_MAP: dict[str, Domain] = {
+    "체육": Domain.CHARACTER_WORK_ETHIC,
+    "영어": Domain.FOREIGN_LANGUAGE,
+    "국어": Domain.HUMANITIES_LITERACY,
+}
+DEPARTMENT_OPTIONS = list(DEPARTMENT_DOMAIN_MAP.keys())
+SUBJECT_OPTIONS = list(SUBJECT_DOMAIN_MAP.keys())
 
 
 def assert_allowed_domain(email: str) -> None:
@@ -81,6 +84,20 @@ def resolve_login(db: Session, email: str, name: str) -> LoginResult:
     )
 
 
+def _validate_department_subject(department: str | None, subject: str | None) -> None:
+    if department is not None and department not in DEPARTMENT_OPTIONS:
+        raise InvalidStateError("담당 부서를 올바르게 선택해주세요.")
+    if subject is not None and subject not in SUBJECT_OPTIONS:
+        raise InvalidStateError("담당 교과를 올바르게 선택해주세요.")
+
+
+def _apply_domain_assignments(db: Session, teacher_id: int, department: str | None, subject: str | None) -> None:
+    if department in DEPARTMENT_DOMAIN_MAP:
+        _assign_teacher_domain(db, teacher_id, DEPARTMENT_DOMAIN_MAP[department])
+    if subject in SUBJECT_DOMAIN_MAP:
+        _assign_teacher_domain(db, teacher_id, SUBJECT_DOMAIN_MAP[subject])
+
+
 def create_onboarding_user(db: Session, payload: OnboardingRequest) -> User:
     assert_allowed_domain(payload.email)
     if find_user_by_email(db, payload.email) is not None:
@@ -97,16 +114,15 @@ def create_onboarding_user(db: Session, payload: OnboardingRequest) -> User:
             approval_status=ApprovalStatus.PENDING,
         )
     else:
-        if payload.department not in TEACHER_DEPARTMENTS:
-            raise InvalidStateError("담당 교과/부서를 올바르게 선택해주세요.")
-        role = Role.HOMEROOM_TEACHER if payload.department == HOMEROOM_DEPARTMENT else Role.AREA_TEACHER
+        _validate_department_subject(payload.department, payload.subject)
         user = User(
             email=payload.email,
             name=payload.name,
-            role=role,
-            grade=payload.grade if payload.department == HOMEROOM_DEPARTMENT else None,
-            class_no=payload.class_no if payload.department == HOMEROOM_DEPARTMENT else None,
+            role=Role.TEACHER,
+            grade=payload.grade,
+            class_no=payload.class_no,
             department=payload.department,
+            subject=payload.subject,
             approval_status=ApprovalStatus.PENDING,
         )
 
@@ -119,36 +135,49 @@ def create_onboarding_user(db: Session, payload: OnboardingRequest) -> User:
 def list_pending_onboarding(db: Session, reviewer: User) -> list[User]:
     """담임교사는 본인 학급 학생을, 관리자는 대기 중인 교사 계정을 본다."""
     query = db.query(User).filter(User.approval_status == ApprovalStatus.PENDING)
-    if reviewer.role == Role.HOMEROOM_TEACHER:
+    if reviewer.role == Role.TEACHER and reviewer.grade is not None and reviewer.class_no is not None:
         return query.filter(
             User.role == Role.STUDENT,
             User.grade == reviewer.grade,
             User.class_no == reviewer.class_no,
         ).all()
     if reviewer.role == Role.ADMIN:
-        return query.filter(User.role.in_([Role.AREA_TEACHER, Role.HOMEROOM_TEACHER])).all()
+        return query.filter(User.role == Role.TEACHER).all()
     return []
 
 
-def decide_onboarding(db: Session, user_id: int, approve: bool) -> User:
-    user = db.get(User, user_id)
-    if user is None:
+def decide_onboarding(db: Session, reviewer: User, user_id: int, approve: bool) -> User:
+    target = db.get(User, user_id)
+    if target is None:
         raise NotFoundError(f"user {user_id} not found")
-    if user.approval_status != ApprovalStatus.PENDING:
+    if target.approval_status != ApprovalStatus.PENDING:
         raise InvalidStateError("이미 처리된 가입 요청입니다.")
 
-    user.approval_status = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
+    if reviewer.role == Role.TEACHER:
+        is_own_class_student = (
+            target.role == Role.STUDENT
+            and reviewer.grade is not None
+            and reviewer.class_no is not None
+            and target.grade == reviewer.grade
+            and target.class_no == reviewer.class_no
+        )
+        if not is_own_class_student:
+            raise PermissionDeniedError("본인 담당 학급 학생만 승인/반려할 수 있습니다.")
+    elif reviewer.role != Role.ADMIN:
+        raise PermissionDeniedError("권한이 없습니다.")
+
+    target.approval_status = ApprovalStatus.APPROVED if approve else ApprovalStatus.REJECTED
     db.commit()
 
-    if approve and user.role == Role.AREA_TEACHER and user.department in DEPARTMENT_DOMAIN_MAP:
-        _assign_teacher_domain(db, user.id, DEPARTMENT_DOMAIN_MAP[user.department])
+    if approve and target.role == Role.TEACHER:
+        _apply_domain_assignments(db, target.id, target.department, target.subject)
 
-    db.refresh(user)
-    return user
+    db.refresh(target)
+    return target
 
 
 def list_teachers(db: Session, include_inactive: bool = False) -> list[User]:
-    query = db.query(User).filter(User.role.in_([Role.HOMEROOM_TEACHER, Role.AREA_TEACHER]))
+    query = db.query(User).filter(User.role == Role.TEACHER)
     if not include_inactive:
         query = query.filter(User.approval_status == ApprovalStatus.APPROVED)
     return query.order_by(User.name).all()
@@ -157,27 +186,25 @@ def list_teachers(db: Session, include_inactive: bool = False) -> list[User]:
 def create_teacher(db: Session, payload: TeacherCreateRequest) -> User:
     """관리자가 직접 교사 계정을 생성 — 온보딩 승인 없이 바로 사용 가능한 계정을 만든다."""
     assert_allowed_domain(payload.email)
-    if payload.department not in TEACHER_DEPARTMENTS:
-        raise InvalidStateError("담당 교과/부서를 올바르게 선택해주세요.")
+    _validate_department_subject(payload.department, payload.subject)
     if find_user_by_email(db, payload.email) is not None:
         raise InvalidStateError("이미 가입된 계정입니다.")
 
-    role = Role.HOMEROOM_TEACHER if payload.department == HOMEROOM_DEPARTMENT else Role.AREA_TEACHER
     teacher = User(
         email=payload.email,
         name=payload.name,
-        role=role,
+        role=Role.TEACHER,
         department=payload.department,
+        subject=payload.subject,
         approval_status=ApprovalStatus.APPROVED,
     )
     db.add(teacher)
     db.commit()
     db.refresh(teacher)
 
-    if role == Role.HOMEROOM_TEACHER and payload.grade is not None and payload.class_no is not None:
+    if payload.grade is not None and payload.class_no is not None:
         set_homeroom_assignment(db, teacher.id, payload.grade, payload.class_no)
-    elif role == Role.AREA_TEACHER and payload.department in DEPARTMENT_DOMAIN_MAP:
-        _assign_teacher_domain(db, teacher.id, DEPARTMENT_DOMAIN_MAP[payload.department])
+    _apply_domain_assignments(db, teacher.id, payload.department, payload.subject)
 
     db.refresh(teacher)
     return teacher
@@ -187,19 +214,12 @@ def update_teacher(db: Session, teacher_id: int, payload: TeacherUpdateRequest) 
     teacher = db.get(User, teacher_id)
     if teacher is None:
         raise NotFoundError(f"teacher {teacher_id} not found")
-    if payload.department not in TEACHER_DEPARTMENTS:
-        raise InvalidStateError("담당 교과/부서를 올바르게 선택해주세요.")
+    _validate_department_subject(payload.department, payload.subject)
 
-    new_role = Role.HOMEROOM_TEACHER if payload.department == HOMEROOM_DEPARTMENT else Role.AREA_TEACHER
     teacher.name = payload.name
     teacher.department = payload.department
-    if new_role != Role.HOMEROOM_TEACHER:
-        teacher.grade = None
-        teacher.class_no = None
-    teacher.role = new_role
-
-    if new_role == Role.AREA_TEACHER and payload.department in DEPARTMENT_DOMAIN_MAP:
-        _assign_teacher_domain(db, teacher.id, DEPARTMENT_DOMAIN_MAP[payload.department])
+    teacher.subject = payload.subject
+    _apply_domain_assignments(db, teacher.id, payload.department, payload.subject)
 
     db.commit()
     db.refresh(teacher)
@@ -221,14 +241,14 @@ def set_homeroom_assignment(db: Session, teacher_id: int, grade: int, class_no: 
     teacher = db.get(User, teacher_id)
     if teacher is None:
         raise NotFoundError(f"teacher {teacher_id} not found")
-    if teacher.role not in (Role.HOMEROOM_TEACHER, Role.AREA_TEACHER):
+    if teacher.role != Role.TEACHER:
         raise InvalidStateError("교사 계정만 담임으로 지정할 수 있습니다.")
 
     # 반당 담임은 1명 — 이미 그 반에 배정된 다른 교사가 있으면 해제
     existing = (
         db.query(User)
         .filter(
-            User.role == Role.HOMEROOM_TEACHER,
+            User.role == Role.TEACHER,
             User.grade == grade,
             User.class_no == class_no,
             User.id != teacher_id,
@@ -239,10 +259,8 @@ def set_homeroom_assignment(db: Session, teacher_id: int, grade: int, class_no: 
         existing.grade = None
         existing.class_no = None
 
-    teacher.role = Role.HOMEROOM_TEACHER
     teacher.grade = grade
     teacher.class_no = class_no
-    teacher.department = HOMEROOM_DEPARTMENT
     db.commit()
     db.refresh(teacher)
     return teacher
